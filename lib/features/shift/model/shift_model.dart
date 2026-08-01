@@ -1,0 +1,78 @@
+class Shift {
+  final String id;
+
+  final String workId;
+
+  final DateTime workDate;
+
+  final String startTime;
+
+  final String endTime;
+
+  final double income;
+
+  final double expense;
+
+  final String note;
+
+  Shift({
+    required this.id,
+    required this.workId,
+    required this.workDate,
+    required this.startTime,
+    required this.endTime,
+    required this.income,
+    required this.expense,
+    required this.note,
+  });
+
+  double get profit => income - expense;
+
+  Map<String, dynamic> toMap() {
+    return {
+      "id": id,
+      "workId": workId,
+      "workDate": workDate.toIso8601String(),
+      "startTime": startTime,
+      "endTime": endTime,
+      "income": income,
+      "expense": expense,
+      "note": note,
+    };
+  }
+
+  factory Shift.fromMap(Map<String, dynamic> map) {
+    return Shift(
+      id: map["id"],
+      workId: map["workId"],
+      workDate: DateTime.parse(map["workDate"]),
+      startTime: map["startTime"],
+      endTime: map["endTime"],
+      income: (map["income"] as num).toDouble(),
+      expense: (map["expense"] as num).toDouble(),
+      note: map["note"],
+    );
+  }
+
+  Shift copyWith({
+    String? id,
+    String? workId,
+    DateTime? workDate,
+    String? startTime,
+    String? endTime,
+    double? income,
+    double? expense,
+    String? note,
+  }) {
+    return Shift(
+      id: id ?? this.id,
+      workId: workId ?? this.workId,
+      workDate: workDate ?? this.workDate,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      income: income ?? this.income,
+      expense: expense ?? this.expense,
+      note: note ?? this.note,
+    );
+  }
+}
