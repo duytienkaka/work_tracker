@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../analytics/provider/analytics_provider.dart';
@@ -38,6 +39,35 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
   final expenseController = TextEditingController();
 
   final noteController = TextEditingController();
+
+  String get formattedDuration {
+    if (selectedWork == null) return '---';
+    if (selectedWork!.salaryType != Work.hourly) return '---';
+    final start = DateTime(
+      workDate.year,
+      workDate.month,
+      workDate.day,
+      startTime.hour,
+      startTime.minute,
+    );
+    if (endTime == null) return 'Chưa có';
+    final end = DateTime(
+      workDate.year,
+      workDate.month,
+      workDate.day,
+      endTime!.hour,
+      endTime!.minute,
+    );
+    final duration = end.difference(start);
+    if (duration.isNegative) return 'Không hợp lệ';
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    return '${hours}h ${minutes}m';
+  }
+
+  bool get isHourly => selectedWork?.salaryType == Work.hourly;
+  bool get isDaily => selectedWork?.salaryType == Work.daily;
+  bool get isFreelance => selectedWork?.salaryType == Work.freelance;
 
   bool get isEdit => widget.shift != null;
 
@@ -157,6 +187,35 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
             },
           ),
 
+          const SizedBox(height: 8),
+          if (selectedWork != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  selectedWork!.salaryTypeName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (selectedWork!.salaryRateDescription.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      selectedWork!.salaryRateDescription,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                if (selectedWork!.hasSalaryRate)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Lương dự kiến: ${MoneyFormatter.format(selectedWork!.computeSalaryForShift(startDateTime: DateTime(workDate.year, workDate.month, workDate.day, startTime.hour, startTime.minute), endDateTime: endTime != null ? DateTime(workDate.year, workDate.month, workDate.day, endTime!.hour, endTime!.minute) : null))}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+              ],
+            ),
+
           const SizedBox(height: 16),
 
           ListTile(
@@ -194,18 +253,27 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
             onTap: pickEndTime,
           ),
 
-          const SizedBox(height: 16),
-
-          TextField(
-            controller: incomeController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-            ],
-            decoration: const InputDecoration(labelText: "Thu nhập"),
-          ),
+          if (isHourly) ...[
+            const SizedBox(height: 16),
+            _InfoRow(label: 'Thời lượng đã làm', value: formattedDuration),
+          ],
 
           const SizedBox(height: 16),
+
+          if (!isDaily) ...[
+            TextField(
+              controller: incomeController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+              ],
+              decoration: const InputDecoration(labelText: "Thu nhập"),
+            ),
+
+            const SizedBox(height: 16),
+          ],
 
           TextField(
             controller: expenseController,
@@ -249,7 +317,9 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                 endTime: endTime != null
                     ? "${endTime!.hour.toString().padLeft(2, '0')}:${endTime!.minute.toString().padLeft(2, '0')}"
                     : '',
-                income: double.tryParse(incomeController.text) ?? 0,
+                income: isDaily
+                    ? 0
+                    : double.tryParse(incomeController.text) ?? 0,
                 expense: double.tryParse(expenseController.text) ?? 0,
                 note: noteController.text,
               );
@@ -293,6 +363,32 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
               }
             },
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(flex: 3, child: Text(value)),
         ],
       ),
     );

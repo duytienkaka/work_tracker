@@ -47,6 +47,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             );
           }
 
+          if (dashboard.revenue7Days.isEmpty &&
+              dashboard.monthlyRevenue.isEmpty &&
+              dashboard.expenseSeries.isEmpty &&
+              dashboard.profitSeries.isEmpty) {
+            return ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              children: const [
+                SizedBox(height: AppSpacing.md),
+                EmptyState(
+                  icon: Icons.insights_rounded,
+                  title: 'Chưa có dữ liệu phân tích',
+                  subtitle: 'Thêm ca làm và giao dịch để xem biểu đồ thống kê.',
+                ),
+              ],
+            );
+          }
+
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
@@ -55,207 +72,147 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSpacing.md),
-              if (dashboard.revenue7Days.isEmpty &&
-                  dashboard.monthlyRevenue.isEmpty &&
-                  dashboard.expenseSeries.isEmpty &&
-                  dashboard.profitSeries.isEmpty)
-                const EmptyState(
-                  icon: Icons.insights_rounded,
-                  title: 'Chưa có dữ liệu phân tích',
-                  subtitle: 'Thêm ca làm và giao dịch để xem biểu đồ thống kê.',
-                )
-              else
-                _TimeFilterSection(
-                  selectedFilter: analytics.selectedFilter,
-                  customRangeLabel:
-                      analytics.selectedFilter ==
-                          AnalyticsTimeFilter.customRange
-                      ? '${_formatDate(dashboard.range.start)} - ${_formatDate(dashboard.range.end)}'
-                      : null,
-                  onFilterSelected: (filter) async {
-                    final analyticsProvider = context.read<AnalyticsProvider>();
-                    final currentContext = context;
 
-                    if (filter == AnalyticsTimeFilter.customRange) {
-                      final range = await showDateRangePicker(
-                        context: currentContext,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        initialDateRange: analytics.customRange,
-                      );
-
-                      if (!currentContext.mounted) return;
-                      if (range != null) {
-                        await analyticsProvider.setFilter(filter, range: range);
-                      }
-                      return;
-                    }
-
+              // Time filter
+              _TimeFilterSection(
+                selectedFilter: analytics.selectedFilter,
+                customRangeLabel:
+                    analytics.selectedFilter == AnalyticsTimeFilter.customRange
+                    ? '${_formatDate(dashboard.range.start)} - ${_formatDate(dashboard.range.end)}'
+                    : null,
+                onFilterSelected: (filter) async {
+                  final provider = context.read<AnalyticsProvider>();
+                  final currentContext = context;
+                  if (filter == AnalyticsTimeFilter.customRange) {
+                    final range = await showDateRangePicker(
+                      context: currentContext,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDateRange: analytics.customRange,
+                    );
                     if (!currentContext.mounted) return;
-                    await analyticsProvider.setFilter(filter);
-                  },
-                ),
+                    if (range != null) {
+                      await provider.setFilter(filter, range: range);
+                    }
+                    return;
+                  }
+                  if (!currentContext.mounted) return;
+                  await provider.setFilter(filter);
+                },
+              ),
               const SizedBox(height: AppSpacing.md),
+
+              // Work type filter
+              _WorkTypeFilterSection(
+                selectedFilter: analytics.selectedWorkType,
+                onTypeSelected: (type) async => await context
+                    .read<AnalyticsProvider>()
+                    .setWorkTypeFilter(type),
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Metrics
               _MetricsGrid(dashboard: dashboard),
               const SizedBox(height: AppSpacing.md),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
+
+              // Charts
+              AnalyticsLineChartCard(
+                title: 'Revenue Chart',
+                subtitle: '7 Days',
+                data: dashboard.revenue7Days,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AppCard(
                 child: Column(
-                  key: ValueKey(
-                    '${dashboard.range.start}-${dashboard.range.end}',
-                  ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AnalyticsLineChartCard(
-                      title: 'Revenue Chart',
-                      subtitle: '7 Days',
-                      data: dashboard.revenue7Days,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Monthly Revenue Chart',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 220,
-                            child: dashboard.monthlyRevenue.isEmpty
-                                ? const Center(child: Text('No data'))
-                                : BarChart(
-                                    BarChartData(
-                                      alignment: BarChartAlignment.spaceAround,
-                                      barTouchData: BarTouchData(
-                                        enabled: false,
-                                      ),
-                                      titlesData: FlTitlesData(
-                                        topTitles: const AxisTitles(
-                                          sideTitles: SideTitles(
-                                            showTitles: false,
-                                          ),
-                                        ),
-                                        rightTitles: const AxisTitles(
-                                          sideTitles: SideTitles(
-                                            showTitles: false,
-                                          ),
-                                        ),
-                                        leftTitles: const AxisTitles(
-                                          sideTitles: SideTitles(
-                                            showTitles: false,
-                                          ),
-                                        ),
-                                        bottomTitles: AxisTitles(
-                                          sideTitles: SideTitles(
-                                            showTitles: true,
-                                            getTitlesWidget: (value, meta) {
-                                              final index = value.toInt();
-                                              if (index < 0 ||
-                                                  index >=
-                                                      dashboard
-                                                          .monthlyRevenue
-                                                          .length) {
-                                                return const SizedBox.shrink();
-                                              }
-                                              return Text(
-                                                dashboard
-                                                    .monthlyRevenue[index]
-                                                    .label,
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                      gridData: FlGridData(
-                                        show: true,
-                                        drawVerticalLine: false,
-                                        getDrawingHorizontalLine: (_) => FlLine(
-                                          color: Theme.of(
-                                            context,
-                                          ).dividerColor.withValues(alpha: 0.3),
-                                          strokeWidth: 1,
-                                        ),
-                                      ),
-                                      borderData: FlBorderData(show: false),
-                                      barGroups: List.generate(
-                                        dashboard.monthlyRevenue.length,
-                                        (index) {
-                                          final item =
-                                              dashboard.monthlyRevenue[index];
-                                          return BarChartGroupData(
-                                            x: index,
-                                            barRods: [
-                                              BarChartRodData(
-                                                toY: item.value,
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.primary,
-                                                width: 18,
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ],
+                    const Text(
+                      'Monthly Revenue Chart',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    AnalyticsLineChartCard(
-                      title: 'Expense Chart',
-                      subtitle: dashboard.filter.label,
-                      data: dashboard.expenseSeries,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AnalyticsLineChartCard(
-                      title: 'Profit Chart',
-                      subtitle: dashboard.filter.label,
-                      data: dashboard.profitSeries,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AnalyticsPieChartCard(
-                      title: 'Income by Work',
-                      subtitle: dashboard.filter.label,
-                      slices: dashboard.incomeByWork
-                          .map(
-                            (item) => AnalyticsPieSlice(
-                              label: item.work.name,
-                              value: item.value,
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 220,
+                      child: dashboard.monthlyRevenue.isEmpty
+                          ? const Center(child: Text('No data'))
+                          : BarChart(
+                              BarChartData(
+                                alignment: BarChartAlignment.spaceAround,
+                                barGroups: dashboard.monthlyRevenue
+                                    .asMap()
+                                    .entries
+                                    .map((e) {
+                                      final idx = e.key;
+                                      final item = e.value;
+                                      return BarChartGroupData(
+                                        x: idx,
+                                        barRods: [
+                                          BarChartRodData(
+                                            toY: item.value,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            width: 18,
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    })
+                                    .toList(),
+                              ),
                             ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AnalyticsPieChartCard(
-                      title: 'Orders by Work',
-                      subtitle: dashboard.filter.label,
-                      slices: dashboard.ordersByWork
-                          .map(
-                            (item) => AnalyticsPieSlice(
-                              label: item.work.name,
-                              value: item.count.toDouble(),
-                            ),
-                          )
-                          .toList(),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
+
+              AnalyticsLineChartCard(
+                title: 'Expense Chart',
+                subtitle: dashboard.filter.label,
+                data: dashboard.expenseSeries,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AnalyticsLineChartCard(
+                title: 'Profit Chart',
+                subtitle: dashboard.filter.label,
+                data: dashboard.profitSeries,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              AnalyticsPieChartCard(
+                title: 'Income by Work',
+                subtitle: dashboard.filter.label,
+                slices: dashboard.incomeByWork
+                    .map(
+                      (i) =>
+                          AnalyticsPieSlice(label: i.work.name, value: i.value),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AnalyticsPieChartCard(
+                title: 'Orders by Work',
+                subtitle: dashboard.filter.label,
+                slices: dashboard.ordersByWork
+                    .map(
+                      (i) => AnalyticsPieSlice(
+                        label: i.work.name,
+                        value: i.count.toDouble(),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: AppSpacing.md),
+
               if (dashboard.bestWork != null)
                 BestWorkCard(
                   statistic: dashboard.bestWork!,
@@ -282,7 +239,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
 class _MetricsGrid extends StatelessWidget {
   final AnalyticsDashboard dashboard;
-
   const _MetricsGrid({required this.dashboard});
 
   @override
@@ -330,21 +286,15 @@ class _MetricsGrid extends StatelessWidget {
       ),
     ];
 
+    final width =
+        (MediaQuery.of(context).size.width -
+            (AppSpacing.md * 2) -
+            AppSpacing.sm) /
+        2;
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
-      children: metrics
-          .map(
-            (card) => SizedBox(
-              width:
-                  (MediaQuery.of(context).size.width -
-                      (AppSpacing.md * 2) -
-                      AppSpacing.sm) /
-                  2,
-              child: card,
-            ),
-          )
-          .toList(),
+      children: metrics.map((m) => SizedBox(width: width, child: m)).toList(),
     );
   }
 }
@@ -363,7 +313,6 @@ class _TimeFilterSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filters = AnalyticsTimeFilter.values;
-
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,17 +334,18 @@ class _TimeFilterSection extends StatelessWidget {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: filters.map((filter) {
-                final selected = filter == selectedFilter;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(filter.label),
-                    selected: selected,
-                    onSelected: (_) => onFilterSelected(filter),
-                  ),
-                );
-              }).toList(),
+              children: filters
+                  .map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(f.label),
+                        selected: f == selectedFilter,
+                        onSelected: (_) => onFilterSelected(f),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ],
@@ -404,6 +354,48 @@ class _TimeFilterSection extends StatelessWidget {
   }
 }
 
-String _formatDate(DateTime value) {
-  return '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+class _WorkTypeFilterSection extends StatelessWidget {
+  final AnalyticsWorkTypeFilter selectedFilter;
+  final Future<void> Function(AnalyticsWorkTypeFilter filter) onTypeSelected;
+
+  const _WorkTypeFilterSection({
+    required this.selectedFilter,
+    required this.onTypeSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Work Type',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: AnalyticsWorkTypeFilter.values
+                  .map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(f.label),
+                        selected: f == selectedFilter,
+                        onSelected: (_) => onTypeSelected(f),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+String _formatDate(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';

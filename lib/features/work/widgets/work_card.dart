@@ -22,171 +22,155 @@ class WorkCard extends StatelessWidget {
     this.onDelete,
   });
 
-  String get salaryType {
-    switch (summary.work.salaryType) {
-      case 0:
-        return 'Lương cố định';
-      case 1:
-        return 'Theo ngày';
-      case 2:
-        return 'Theo giờ';
-      case 3:
-        return 'Freelancer';
-      default:
-        return 'Khác';
-    }
-  }
+  String get salaryType => summary.work.salaryTypeName;
 
   @override
   Widget build(BuildContext context) {
-    return Hero(
-      tag: 'work-${summary.work.id}',
-      child: AppCard(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Color(
-                      summary.work.color,
-                    ).withValues(alpha: 0.16),
-                    child: Icon(Icons.work, color: Color(summary.work.color)),
+    return AppCard(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Color(
+                    summary.work.color,
+                  ).withValues(alpha: 0.16),
+                  child: Icon(Icons.work, color: Color(summary.work.color)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        summary.work.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        salaryType,
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'Đang hoạt động',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              summary.work.description.isEmpty
+                  ? 'Không có mô tả'
+                  : summary.work.description,
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 8),
+            FutureBuilder<WorkSummary>(
+              future: () {
+                try {
+                  final provider = context.read<WorkProvider>();
+                  return provider.getSummary(summary.work.id);
+                } catch (_) {
+                  return Future<WorkSummary>.value(summary);
+                }
+              }(),
+              builder: (context, snapshot) {
+                final stats = snapshot.data ?? summary;
+                return Column(
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          summary.work.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: _StatTile(
+                            label: 'Ca',
+                            value: '${stats.totalShift} ca',
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          salaryType,
-                          style: TextStyle(color: AppColors.textSecondary),
+                        Expanded(
+                          child: _StatTile(
+                            label: 'Thu',
+                            value: MoneyFormatter.format(stats.income),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Text(
-                      'Đang hoạt động',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                summary.work.description.isEmpty
-                    ? 'Không có mô tả'
-                    : summary.work.description,
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 8),
-              FutureBuilder<WorkSummary>(
-                future: () {
-                  try {
-                    final provider = context.read<WorkProvider>();
-                    return provider.getSummary(summary.work.id);
-                  } catch (_) {
-                    return Future<WorkSummary>.value(summary);
-                  }
-                }(),
-                builder: (context, snapshot) {
-                  final stats = snapshot.data ?? summary;
-                  return Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatTile(
-                              label: 'Ca',
-                              value: '${stats.totalShift} ca',
-                            ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StatTile(
+                            label: 'Chi',
+                            value: MoneyFormatter.format(stats.expense),
                           ),
-                          Expanded(
-                            child: _StatTile(
-                              label: 'Thu',
-                              value: MoneyFormatter.format(stats.income),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatTile(
-                              label: 'Chi',
-                              value: MoneyFormatter.format(stats.expense),
-                            ),
-                          ),
-                          Expanded(
-                            child: _StatTile(
-                              label: 'Lợi nhuận',
-                              value: MoneyFormatter.format(stats.profit),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: onEdit,
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text('Sửa'),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => WorkDetailPage(summary: summary),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.bar_chart, size: 18),
-                    label: const Text('Chi tiết'),
-                  ),
-                  const Spacer(),
-                  if (onDelete != null)
-                    IconButton(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete, color: Colors.red),
+                        Expanded(
+                          child: _StatTile(
+                            label: 'Lợi nhuận',
+                            value: MoneyFormatter.format(stats.profit),
+                          ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-            ],
-          ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Sửa'),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WorkDetailPage(summary: summary),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.bar_chart, size: 18),
+                  label: const Text('Chi tiết'),
+                ),
+                const Spacer(),
+                if (onDelete != null)
+                  IconButton(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );

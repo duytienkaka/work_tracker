@@ -13,6 +13,23 @@ import '../model/work_breakdown.dart';
 import '../model/work_statistic.dart';
 import '../repository/analytics_repository.dart';
 
+enum AnalyticsWorkTypeFilter { all, hourly, daily, freelance }
+
+extension AnalyticsWorkTypeFilterLabel on AnalyticsWorkTypeFilter {
+  String get label {
+    switch (this) {
+      case AnalyticsWorkTypeFilter.all:
+        return 'All';
+      case AnalyticsWorkTypeFilter.hourly:
+        return 'Hourly';
+      case AnalyticsWorkTypeFilter.daily:
+        return 'Daily';
+      case AnalyticsWorkTypeFilter.freelance:
+        return 'Freelance';
+    }
+  }
+}
+
 class AnalyticsProvider extends ChangeNotifier {
   final AnalyticsRepository repository;
 
@@ -29,6 +46,7 @@ class AnalyticsProvider extends ChangeNotifier {
   AnalyticsDashboard? dashboard;
   bool isLoading = false;
   AnalyticsTimeFilter selectedFilter = AnalyticsTimeFilter.sevenDays;
+  AnalyticsWorkTypeFilter selectedWorkType = AnalyticsWorkTypeFilter.all;
   DateTimeRange? customRange;
 
   Future<void> load() async {
@@ -65,6 +83,12 @@ class AnalyticsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setWorkTypeFilter(AnalyticsWorkTypeFilter filter) async {
+    selectedWorkType = filter;
+    _rebuildDashboard();
+    notifyListeners();
+  }
+
   void _rebuildDashboard() {
     final range = _resolveRange();
 
@@ -94,20 +118,29 @@ class AnalyticsProvider extends ChangeNotifier {
     }
 
     final filteredShifts = shifts.where((shift) {
-      return _isWithinRange(shift.workDate, range);
+      return _isWithinRange(shift.workDate, range) &&
+          _shiftMatchesFilter(shift);
     }).toList();
 
     final filteredIncomes = incomeItems.where((income) {
       final shift = _shiftForIncome(income);
-      return shift != null && _isWithinRange(shift.workDate, range);
+      return shift != null &&
+          _isWithinRange(shift.workDate, range) &&
+          _shiftMatchesFilter(shift);
     }).toList();
 
     final filteredExpenses = expenseItems.where((expense) {
       final shift = _shiftForExpense(expense);
-      return shift != null && _isWithinRange(shift.workDate, range);
+      return shift != null &&
+          _isWithinRange(shift.workDate, range) &&
+          _shiftMatchesFilter(shift);
     }).toList();
 
-    final totalOrders = filteredIncomes.length;
+    final filteredManualIncomes = filteredIncomes
+        .where((income) => !income.generated)
+        .toList();
+
+    final totalOrders = filteredManualIncomes.length;
     final totalIncome = filteredIncomes.fold(
       0.0,
       (sum, income) => sum + income.amount,
@@ -120,7 +153,13 @@ class AnalyticsProvider extends ChangeNotifier {
       0.0,
       (sum, expense) => sum + expense.amount,
     );
-    final averageOrder = totalOrders == 0 ? 0.0 : totalIncome / totalOrders;
+    final manualOrderIncome = filteredManualIncomes.fold(
+      0.0,
+      (sum, income) => sum + income.amount,
+    );
+    final averageOrder = totalOrders == 0
+        ? 0.0
+        : manualOrderIncome / totalOrders;
 
     dashboard = AnalyticsDashboard(
       filter: selectedFilter,
@@ -187,7 +226,7 @@ class AnalyticsProvider extends ChangeNotifier {
         filteredIncomes,
         (income) => income.amount,
       ),
-      ordersByWork: _buildWorkBreakdown(filteredIncomes, (income) => 1),
+      ordersByWork: _buildWorkBreakdown(filteredManualIncomes, (income) => 1),
       bestWork: _buildBestWork(filteredShifts),
       worstWork: _buildWorstWork(filteredShifts),
     );
@@ -246,6 +285,35 @@ class AnalyticsProvider extends ChangeNotifier {
       999,
     );
     return !normalized.isBefore(start) && !normalized.isAfter(end);
+  }
+
+  bool _shiftMatchesFilter(Shift shift) {
+    final work = works.firstWhere(
+      (item) => item.id == shift.workId,
+      orElse: () => Work(
+        id: shift.workId,
+        name: shift.workId,
+        description: '',
+        salaryType: Work.legacyFixed,
+        dailyRate: 0,
+        hourlyRate: 0,
+        color: 0,
+        icon: 0,
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    switch (selectedWorkType) {
+      case AnalyticsWorkTypeFilter.all:
+        return true;
+      case AnalyticsWorkTypeFilter.hourly:
+        return work.salaryType == Work.hourly;
+      case AnalyticsWorkTypeFilter.daily:
+        return work.salaryType == Work.daily;
+      case AnalyticsWorkTypeFilter.freelance:
+        return work.salaryType == Work.freelance;
+    }
   }
 
   Shift? _shiftForIncome(Income income) {
@@ -347,7 +415,9 @@ class AnalyticsProvider extends ChangeNotifier {
           id: shift.workId,
           name: shift.workId,
           description: '',
-          salaryType: 0,
+          salaryType: Work.legacyFixed,
+          dailyRate: 0,
+          hourlyRate: 0,
           color: 0,
           icon: 0,
           isActive: true,

@@ -37,12 +37,41 @@ class WorkRepository {
       where: "id = ?",
       whereArgs: [work.id],
     );
+
+    final shiftRepository = ShiftRepository();
+    await shiftRepository.refreshGeneratedIncomeForWork(work.id);
   }
 
   Future<void> deleteWork(String id) async {
     final db = await _db;
 
-    await db.delete("works", where: "id = ?", whereArgs: [id]);
+    await db.transaction((txn) async {
+      final shiftIds = await txn.rawQuery(
+        'SELECT id FROM shifts WHERE workId = ?',
+        [id],
+      );
+
+      if (shiftIds.isNotEmpty) {
+        final ids = shiftIds
+            .map((row) => row['id'])
+            .whereType<String>()
+            .toList();
+
+        await txn.delete(
+          'income',
+          where: 'shift_id IN (${List.filled(ids.length, '?').join(',')})',
+          whereArgs: ids,
+        );
+        await txn.delete(
+          'expense',
+          where: 'shift_id IN (${List.filled(ids.length, '?').join(',')})',
+          whereArgs: ids,
+        );
+      }
+
+      await txn.delete('shifts', where: 'workId = ?', whereArgs: [id]);
+      await txn.delete('works', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   Future<List<Shift>> getShiftsByWork(String workId) async {
@@ -115,7 +144,9 @@ class WorkRepository {
             id: workId,
             name: 'Unknown',
             description: '',
-            salaryType: 0,
+            salaryType: Work.legacyFixed,
+            dailyRate: 0,
+            hourlyRate: 0,
             color: 0,
             icon: Icons.work.codePoint,
             isActive: true,

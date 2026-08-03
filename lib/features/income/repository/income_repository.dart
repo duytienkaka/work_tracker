@@ -30,6 +30,8 @@ class IncomeRepository {
   }
 
   Future<void> update(Income income) async {
+    if (income.generated) return;
+
     final db = await _db;
 
     await db.update(
@@ -40,8 +42,25 @@ class IncomeRepository {
     );
   }
 
+  Future<Income?> getById(String id) async {
+    final db = await _db;
+
+    final result = await db.query(
+      'income',
+      where: 'id=?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+    return Income.fromMap(result.first);
+  }
+
   Future<void> delete(String id) async {
     final db = await _db;
+
+    final income = await getById(id);
+    if (income?.generated == true) return;
 
     await db.delete('income', where: 'id=?', whereArgs: [id]);
   }

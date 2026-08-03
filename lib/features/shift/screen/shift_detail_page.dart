@@ -14,6 +14,7 @@ import '../../income/model/income_model.dart';
 import '../../income/provider/income_provider.dart';
 import '../../income/widgets/income_card.dart';
 import '../../work/model/work_model.dart';
+import '../../../core/services/salary_engine.dart';
 import '../model/shift_model.dart';
 import '../provider/shift_provider.dart';
 import 'shift_form_page.dart';
@@ -55,19 +56,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: shift == null
-            ? Text(work?.name ?? 'Chi tiết ca làm')
-            : Hero(
-                tag: _heroTag(shift.id),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Text(
-                    work?.name ?? 'Chi tiết ca làm',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
+        title: Text(work?.name ?? 'Chi tiết ca làm'),
         actions: [
           if (shift != null) ...[
             Builder(
@@ -102,7 +91,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildSummarySection(),
+                _buildSummarySection(shift, work),
                 const SizedBox(height: 16),
                 _buildShiftInformationSection(shift, work),
                 const SizedBox(height: 16),
@@ -114,14 +103,27 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
     );
   }
 
-  String _heroTag(String shiftId) => 'shift-hero-$shiftId';
-
-  Widget _buildSummarySection() {
+  Widget _buildSummarySection(Shift shift, Work? work) {
     return _SectionCard(
       title: 'Summary',
       child: Consumer2<IncomeProvider, ExpenseProvider>(
         builder: (context, incomeProvider, expenseProvider, _) {
           final summary = context.read<ShiftProvider>().buildSummary(
+            work:
+                work ??
+                Work(
+                  id: shift.workId,
+                  name: shift.workId,
+                  description: '',
+                  salaryType: Work.legacyFixed,
+                  dailyRate: 0,
+                  hourlyRate: 0,
+                  color: 0,
+                  icon: 0,
+                  isActive: true,
+                  createdAt: DateTime.now(),
+                ),
+            shift: shift,
             incomes: incomeProvider.incomes,
             expenses: expenseProvider.expenses,
           );
@@ -201,6 +203,24 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
             label: 'Giờ kết thúc',
             value: shift.endTime.isEmpty ? '---' : shift.endTime,
           ),
+          if (work != null && work.hasSalaryRate)
+            _InfoRow(
+              label: 'Lương theo công việc',
+              value: MoneyFormatter.format(
+                work.computeSalaryForShift(
+                  startDateTime:
+                      shift.startDateTime ??
+                      DateTime(
+                        shift.workDate.year,
+                        shift.workDate.month,
+                        shift.workDate.day,
+                        0,
+                        0,
+                      ),
+                  endDateTime: shift.endDateTime,
+                ),
+              ),
+            ),
           _InfoRow(
             label: 'Ghi chú',
             value: shift.note.isEmpty ? '---' : shift.note,
@@ -216,97 +236,144 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
       child: Consumer<IncomeProvider>(
         builder: (context, provider, _) {
           final incomes = provider.incomes;
+          final salaryIncomes = incomes
+              .where(
+                (income) =>
+                    income.generated ||
+                    SalaryEngine.isSalaryIncomeId(income.id),
+              )
+              .toList();
+          final manualIncomes = incomes
+              .where(
+                (income) =>
+                    !(income.generated ||
+                        SalaryEngine.isSalaryIncomeId(income.id)),
+              )
+              .toList();
 
-          return AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: incomes.isEmpty
-                  ? Column(
-                      key: const ValueKey('income-empty'),
-                      children: [
-                        const EmptyState(
-                          icon: Icons.account_balance_wallet_outlined,
-                          title: 'Chưa có đơn hàng',
-                          subtitle:
-                              'Thêm đơn hàng để bắt đầu theo dõi doanh thu.',
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (salaryIncomes.isNotEmpty) ...[
+                const Text(
+                  'Salary',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                ...salaryIncomes.map((income) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Card(
+                      elevation: 0,
+                      color: AppColors.background,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.12),
                         ),
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: FloatingActionButton.extended(
-                            heroTag: 'add-income-${widget.shift?.id ?? 'none'}',
-                            onPressed: () => _showIncomeFormSheet(context),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add Income'),
-                          ),
+                      ),
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.payments_rounded,
+                          color: AppColors.primary,
                         ),
-                      ],
-                    )
-                  : Column(
-                      key: ValueKey('income-list-${incomes.length}'),
-                      children: [
-                        ...incomes.map(
-                          (income) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Dismissible(
-                              key: ValueKey('income-${income.id}'),
-                              direction: DismissDirection.horizontal,
-                              confirmDismiss: (direction) async {
-                                if (direction == DismissDirection.startToEnd) {
-                                  await _showIncomeFormSheet(
-                                    context,
-                                    income: income,
-                                  );
-                                  return false;
-                                }
-
-                                if (direction == DismissDirection.endToStart) {
-                                  await _confirmDeleteIncome(context, income);
-                                  return false;
-                                }
-
-                                return false;
-                              },
-                              background: _SwipeBackground(
-                                alignment: Alignment.centerLeft,
-                                color: AppColors.success,
-                                icon: Icons.edit_rounded,
-                                label: 'Edit',
-                              ),
-                              secondaryBackground: _SwipeBackground(
-                                alignment: Alignment.centerRight,
-                                color: AppColors.danger,
-                                icon: Icons.delete_rounded,
-                                label: 'Delete',
-                              ),
-                              child: IncomeCard(
-                                income: income,
-                                onTap: () => _showIncomeFormSheet(
-                                  context,
-                                  income: income,
-                                ),
-                                onLongPress: () =>
-                                    _confirmDeleteIncome(context, income),
-                              ),
-                            ),
-                          ),
+                        title: Text(income.title),
+                        subtitle: const Text('Auto-generated salary'),
+                        trailing: Text(
+                          MoneyFormatter.format(income.amount),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        const SizedBox(height: 6),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: FloatingActionButton.extended(
-                            heroTag: 'add-income-${widget.shift?.id ?? 'none'}',
-                            onPressed: () => _showIncomeFormSheet(context),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add Income'),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-            ),
+                  );
+                }),
+                const SizedBox(height: 6),
+              ],
+              const Text(
+                'Manual Income',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 10),
+              if (manualIncomes.isEmpty)
+                Column(
+                  children: [
+                    const EmptyState(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Chưa có đơn hàng',
+                      subtitle: 'Thêm đơn hàng thủ công để theo dõi doanh thu.',
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FloatingActionButton.extended(
+                        heroTag: 'add-income-${widget.shift?.id ?? 'none'}',
+                        onPressed: () => _showIncomeFormSheet(context),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Income'),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    ...manualIncomes.map((income) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Dismissible(
+                          key: ValueKey('income-${income.id}'),
+                          direction: DismissDirection.horizontal,
+                          confirmDismiss: (direction) async {
+                            if (direction == DismissDirection.startToEnd) {
+                              await _showIncomeFormSheet(
+                                context,
+                                income: income,
+                              );
+                              return false;
+                            }
+
+                            if (direction == DismissDirection.endToStart) {
+                              await _confirmDeleteIncome(context, income);
+                              return false;
+                            }
+
+                            return false;
+                          },
+                          background: _SwipeBackground(
+                            alignment: Alignment.centerLeft,
+                            color: AppColors.success,
+                            icon: Icons.edit_rounded,
+                            label: 'Edit',
+                          ),
+                          secondaryBackground: _SwipeBackground(
+                            alignment: Alignment.centerRight,
+                            color: AppColors.danger,
+                            icon: Icons.delete_rounded,
+                            label: 'Delete',
+                          ),
+                          child: IncomeCard(
+                            income: income,
+                            onTap: () =>
+                                _showIncomeFormSheet(context, income: income),
+                            onLongPress: () =>
+                                _confirmDeleteIncome(context, income),
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FloatingActionButton.extended(
+                        heroTag: 'add-income-${widget.shift?.id ?? 'none'}',
+                        onPressed: () => _showIncomeFormSheet(context),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Income'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
           );
         },
       ),

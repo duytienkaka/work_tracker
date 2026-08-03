@@ -795,6 +795,27 @@ class _ActiveShiftCard extends StatelessWidget {
                       '${currentShift.workDate.day}/${currentShift.workDate.month}/${currentShift.workDate.year}',
                       style: const TextStyle(color: AppColors.textSecondary),
                     ),
+                    if (work != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          work!.salaryTypeName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

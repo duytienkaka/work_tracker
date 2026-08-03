@@ -29,12 +29,20 @@ class WorkProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addWork(String name, String description, int salaryType) async {
+  Future<void> addWork(
+    String name,
+    String description,
+    int salaryType,
+    double dailyRate,
+    double hourlyRate,
+  ) async {
     final work = Work(
       id: const Uuid().v4(),
       name: name,
       description: description,
       salaryType: salaryType,
+      dailyRate: dailyRate,
+      hourlyRate: hourlyRate,
       color: Colors.blue.toARGB32(),
       icon: Icons.work.codePoint,
       isActive: true,

@@ -44,6 +44,8 @@ class WorkTrackerApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (context) => ShiftProvider(context.read<ShiftRepository>()),
         ),
+        ChangeNotifierProvider(create: (_) => TimelineProvider()),
+        ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
         Provider(create: (_) => IncomeRepository()),
         ChangeNotifierProvider(
           create: (context) => IncomeProvider(
@@ -66,8 +68,6 @@ class WorkTrackerApp extends StatelessWidget {
             timelineProvider: context.read<TimelineProvider>(),
           ),
         ),
-        ChangeNotifierProvider(create: (_) => TimelineProvider()),
-        ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
         Provider(create: (_) => SettingsRepository()),
         ChangeNotifierProvider(
           create: (context) =>

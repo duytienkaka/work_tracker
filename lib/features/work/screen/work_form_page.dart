@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../model/work_model.dart';
 import '../provider/work_provider.dart';
@@ -17,10 +18,21 @@ class WorkFormPage extends StatefulWidget {
 class _WorkFormPageState extends State<WorkFormPage> {
   final nameController = TextEditingController();
   final descriptionController = TextEditingController();
+  final dailyRateController = TextEditingController();
+  final hourlyRateController = TextEditingController();
 
-  int salaryType = 0;
+  int salaryType = Work.daily;
 
   bool get isEdit => widget.work != null;
+
+  bool get isLegacyFixedEditing =>
+      isEdit && widget.work!.salaryType == Work.legacyFixed;
+
+  String get salaryRateLabel {
+    if (salaryType == Work.daily) return 'Mức lương ngày';
+    if (salaryType == Work.hourly) return 'Mức lương giờ';
+    return '';
+  }
 
   @override
   void initState() {
@@ -30,6 +42,8 @@ class _WorkFormPageState extends State<WorkFormPage> {
       nameController.text = widget.work!.name;
       descriptionController.text = widget.work!.description;
       salaryType = widget.work!.salaryType;
+      dailyRateController.text = widget.work!.dailyRate.toString();
+      hourlyRateController.text = widget.work!.hourlyRate.toString();
     }
   }
 
@@ -37,6 +51,8 @@ class _WorkFormPageState extends State<WorkFormPage> {
   void dispose() {
     nameController.dispose();
     descriptionController.dispose();
+    dailyRateController.dispose();
+    hourlyRateController.dispose();
     super.dispose();
   }
 
@@ -74,11 +90,24 @@ class _WorkFormPageState extends State<WorkFormPage> {
                 labelText: "Loại lương",
                 border: OutlineInputBorder(),
               ),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text("Lương cố định")),
-                DropdownMenuItem(value: 1, child: Text("Theo ngày")),
-                DropdownMenuItem(value: 2, child: Text("Theo giờ")),
-                DropdownMenuItem(value: 3, child: Text("Freelance")),
+              items: [
+                if (isLegacyFixedEditing)
+                  const DropdownMenuItem(
+                    value: Work.legacyFixed,
+                    child: Text("Lương cố định (legacy)"),
+                  ),
+                const DropdownMenuItem(
+                  value: Work.daily,
+                  child: Text("Theo ngày"),
+                ),
+                const DropdownMenuItem(
+                  value: Work.hourly,
+                  child: Text("Theo giờ"),
+                ),
+                const DropdownMenuItem(
+                  value: Work.freelance,
+                  child: Text("Freelance"),
+                ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -87,35 +116,99 @@ class _WorkFormPageState extends State<WorkFormPage> {
               },
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            if (isLegacyFixedEditing)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'This work is using legacy fixed salary. Choose a new salary type to migrate it.',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              ),
+            if (salaryType == Work.daily || salaryType == Work.hourly)
+              Column(
+                children: [
+                  TextField(
+                    controller: salaryType == Work.daily
+                        ? dailyRateController
+                        : hourlyRateController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: salaryRateLabel,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            const SizedBox(height: 8),
 
             PrimaryButton(
               text: isEdit ? "Cập nhật" : "Lưu",
               icon: Icons.save,
               onPressed: () async {
-                if (nameController.text.trim().isEmpty) return;
+                final currentContext = context;
+                final name = nameController.text.trim();
+                if (name.isEmpty) {
+                  AppFeedback.showError(
+                    currentContext,
+                    'Tên công việc là bắt buộc.',
+                  );
+                  return;
+                }
 
-                final provider = context.read<WorkProvider>();
+                final provider = currentContext.read<WorkProvider>();
+                final dailyRate =
+                    double.tryParse(dailyRateController.text) ?? 0;
+                final hourlyRate =
+                    double.tryParse(hourlyRateController.text) ?? 0;
+
+                if (salaryType == Work.daily && dailyRate <= 0) {
+                  AppFeedback.showError(
+                    currentContext,
+                    'Vui lòng nhập mức lương ngày hợp lệ.',
+                  );
+                  return;
+                }
+
+                if (salaryType == Work.hourly && hourlyRate <= 0) {
+                  AppFeedback.showError(
+                    currentContext,
+                    'Vui lòng nhập mức lương giờ hợp lệ.',
+                  );
+                  return;
+                }
 
                 if (isEdit) {
                   await provider.updateWork(
                     widget.work!.copyWith(
-                      name: nameController.text.trim(),
+                      name: name,
                       description: descriptionController.text.trim(),
                       salaryType: salaryType,
+                      dailyRate: dailyRate,
+                      hourlyRate: hourlyRate,
                     ),
                   );
                 } else {
                   await provider.addWork(
-                    nameController.text.trim(),
+                    name,
                     descriptionController.text.trim(),
                     salaryType,
+                    dailyRate,
+                    hourlyRate,
                   );
                 }
 
-                if (!context.mounted) return;
                 if (!mounted) return;
-                Navigator.pop(context);
+                if (!currentContext.mounted) return;
+                Navigator.pop(currentContext);
               },
             ),
           ],

@@ -41,11 +41,15 @@ class IncomeProvider extends ChangeNotifier {
   }
 
   Future<void> updateIncome(Income income) async {
+    if (income.generated) return;
     await repository.update(income);
     await _refreshAfterMutation(income.shiftId);
   }
 
   Future<void> deleteIncome(String id, String shiftId) async {
+    final income = await repository.getById(id);
+    if (income?.generated == true) return;
+
     await repository.delete(id);
     await _refreshAfterMutation(shiftId);
   }

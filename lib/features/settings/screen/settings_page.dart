@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/database/app_database.dart';
+import '../../../shared/widgets/app_feedback.dart';
+import '../../analytics/provider/analytics_provider.dart';
+import '../../dashboard/provider/dashboard_provider.dart';
 import '../../shift/provider/shift_provider.dart';
+import '../../timeline/provider/timeline_provider.dart';
+import '../../work/provider/work_provider.dart';
 import '../model/currency_option.dart';
 import '../provider/settings_provider.dart';
 import '../service/export_service.dart';
@@ -133,6 +139,77 @@ class SettingsPage extends StatelessWidget {
                         );
                       },
                     );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_forever,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text('Reset data'),
+                  subtitle: const Text(
+                    'Xoá toàn bộ công việc, ca làm và giao dịch đã lưu.',
+                  ),
+                  onTap: () async {
+                    final currentContext = context;
+                    final shiftProvider = currentContext.read<ShiftProvider>();
+                    final workProvider = currentContext.read<WorkProvider>();
+                    final dashboardProvider = currentContext
+                        .read<DashboardProvider>();
+                    final analyticsProvider = currentContext
+                        .read<AnalyticsProvider>();
+                    final timelineProvider = currentContext
+                        .read<TimelineProvider>();
+
+                    final confirmed = await showDialog<bool>(
+                      context: currentContext,
+                      builder: (dialogContext) {
+                        return AlertDialog(
+                          title: const Text('Xác nhận đặt lại dữ liệu'),
+                          content: const Text(
+                            'Bạn có chắc muốn xoá toàn bộ dữ liệu? Hành động này không thể hoàn tác.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pop(dialogContext, false),
+                              child: const Text('Huỷ'),
+                            ),
+                            FilledButton(
+                              onPressed: () =>
+                                  Navigator.pop(dialogContext, true),
+                              child: const Text('Đồng ý'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (confirmed != true || !currentContext.mounted) return;
+
+                    try {
+                      await AppDatabase.resetDatabase();
+                      if (!currentContext.mounted) return;
+
+                      await shiftProvider.load();
+                      await workProvider.loadWorks();
+                      await dashboardProvider.load();
+                      await analyticsProvider.load();
+                      await timelineProvider.loadTimeline();
+
+                      if (!currentContext.mounted) return;
+                      AppFeedback.showSuccess(
+                        currentContext,
+                        'Dữ liệu đã được đặt lại thành công.',
+                      );
+                    } catch (_) {
+                      if (!currentContext.mounted) return;
+                      AppFeedback.showError(
+                        currentContext,
+                        'Reset dữ liệu thất bại. Vui lòng thử lại.',
+                      );
+                    }
                   },
                 ),
               ],

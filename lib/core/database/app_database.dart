@@ -5,7 +5,7 @@ class AppDatabase {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int version = 7;
+  static const int version = 9;
 
   static Future<Database> database() async {
     if (_database != null) {
@@ -37,20 +37,24 @@ class AppDatabase {
       },
 
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 7) {
-          await _migrateExpenseTable(db);
-        }
-
-        if (oldVersion < 6) {
-          await _migrateIncomeTable(db);
-        }
-
         if (oldVersion < 5) {
           await db.execute("DROP TABLE IF EXISTS transactions;");
           await db.execute("DROP TABLE IF EXISTS shifts;");
           await db.execute("DROP TABLE IF EXISTS works;");
           await _createTables(db);
           return;
+        }
+
+        if (oldVersion < 8) {
+          await _migrateWorkSalaryRates(db);
+        }
+
+        if (oldVersion < 9) {
+          await _migrateIncomeTable(db);
+        }
+
+        if (oldVersion < 7) {
+          await _migrateExpenseTable(db);
         }
       },
     );
@@ -65,6 +69,8 @@ id TEXT PRIMARY KEY,
 name TEXT,
 description TEXT,
 salaryType INTEGER,
+dailyRate REAL,
+hourlyRate REAL,
 color INTEGER,
 icon INTEGER,
 isActive INTEGER,
@@ -105,6 +111,7 @@ title TEXT NOT NULL,
 amount REAL NOT NULL,
 tip REAL NOT NULL DEFAULT 0,
 note TEXT,
+generated INTEGER NOT NULL DEFAULT 0,
 created_at TEXT NOT NULL,
 updated_at TEXT
 )
@@ -137,6 +144,7 @@ title TEXT NOT NULL,
 amount REAL NOT NULL,
 tip REAL NOT NULL DEFAULT 0,
 note TEXT,
+generated INTEGER NOT NULL DEFAULT 0,
 created_at TEXT NOT NULL,
 updated_at TEXT
 )
@@ -179,9 +187,32 @@ updated_at TEXT
       await db.execute("ALTER TABLE income ADD COLUMN note TEXT");
     }
 
+    if (!columnNames.contains('generated')) {
+      await db.execute(
+        "ALTER TABLE income ADD COLUMN generated INTEGER NOT NULL DEFAULT 0",
+      );
+    }
+
     if (!columnNames.contains('created_at')) {
       await db.execute(
         "ALTER TABLE income ADD COLUMN created_at TEXT NOT NULL DEFAULT ''",
+      );
+    }
+  }
+
+  static Future<void> _migrateWorkSalaryRates(Database db) async {
+    final columns = await db.rawQuery("PRAGMA table_info(works)");
+    final columnNames = columns.map((column) => column['name']).toSet();
+
+    if (!columnNames.contains('dailyRate')) {
+      await db.execute(
+        "ALTER TABLE works ADD COLUMN dailyRate REAL NOT NULL DEFAULT 0",
+      );
+    }
+
+    if (!columnNames.contains('hourlyRate')) {
+      await db.execute(
+        "ALTER TABLE works ADD COLUMN hourlyRate REAL NOT NULL DEFAULT 0",
       );
     }
   }
@@ -240,5 +271,15 @@ updated_at TEXT
     if (!columnNames.contains('updated_at')) {
       await db.execute("ALTER TABLE expense ADD COLUMN updated_at TEXT");
     }
+  }
+
+  static Future<void> resetDatabase() async {
+    final db = await database();
+    await db.transaction((txn) async {
+      await txn.delete('income');
+      await txn.delete('expense');
+      await txn.delete('shifts');
+      await txn.delete('works');
+    });
   }
 }

@@ -116,6 +116,8 @@ class _FakeWorkRepository extends WorkRepository {
           name: 'Unknown',
           description: '',
           salaryType: 0,
+          dailyRate: 0,
+          hourlyRate: 0,
           color: 0,
           icon: 0,
           isActive: true,
@@ -162,7 +164,7 @@ void main() {
     final repository = _FakeWorkRepository();
     final provider = WorkProvider(repository);
 
-    await provider.addWork('Regression Work', 'Test description', 1);
+    await provider.addWork('Regression Work', 'Test description', 1, 0, 0);
 
     expect(provider.works.length, 1);
     expect(provider.filteredWorks.length, 1);
@@ -173,7 +175,33 @@ void main() {
   test('Shift summary totals income tips and expenses correctly', () async {
     final provider = ShiftProvider(ShiftRepository());
 
+    final work = Work(
+      id: 'w1',
+      name: 'Test Work',
+      description: '',
+      salaryType: Work.freelance,
+      dailyRate: 0,
+      hourlyRate: 0,
+      color: 0,
+      icon: 0,
+      isActive: true,
+      createdAt: DateTime.now(),
+    );
+
+    final shift = Shift(
+      id: 's1',
+      workId: 'w1',
+      workDate: DateTime.now(),
+      startTime: '09:00',
+      endTime: '10:00',
+      income: 0,
+      expense: 0,
+      note: '',
+    );
+
     final summary = provider.buildSummary(
+      work: work,
+      shift: shift,
       incomes: [
         Income(
           id: 'i1',

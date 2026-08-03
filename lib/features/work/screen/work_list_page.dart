@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_spacing.dart';
@@ -121,7 +122,60 @@ class _WorkListPageState extends State<WorkListPage> {
                             );
                           },
                           onDelete: () async {
-                            await provider.deleteWork(summary.work.id);
+                            final currentContext = context;
+                            final dashboardProvider = currentContext
+                                .read<DashboardProvider>();
+                            final analyticsProvider = currentContext
+                                .read<AnalyticsProvider>();
+                            final timelineProvider = currentContext
+                                .read<TimelineProvider>();
+
+                            final shouldDelete = await showDialog<bool>(
+                              context: currentContext,
+                              builder: (dialogContext) {
+                                return AlertDialog(
+                                  title: const Text('Xác nhận xoá công việc'),
+                                  content: const Text(
+                                    'Xoá công việc sẽ đồng thời xoá toàn bộ ca làm và dữ liệu liên quan. Bạn có muốn tiếp tục?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(dialogContext, false),
+                                      child: const Text('Huỷ'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () =>
+                                          Navigator.pop(dialogContext, true),
+                                      child: const Text('Xoá'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (shouldDelete != true ||
+                                !currentContext.mounted) {
+                              return;
+                            }
+
+                            try {
+                              await provider.deleteWork(summary.work.id);
+                              await dashboardProvider.load();
+                              await analyticsProvider.load();
+                              await timelineProvider.loadTimeline();
+                              if (!currentContext.mounted) return;
+                              AppFeedback.showSuccess(
+                                currentContext,
+                                'Công việc và ca làm liên quan đã được xoá.',
+                              );
+                            } catch (_) {
+                              if (!currentContext.mounted) return;
+                              AppFeedback.showError(
+                                currentContext,
+                                'Xoá công việc thất bại. Vui lòng thử lại.',
+                              );
+                            }
                           },
                         );
                       },
