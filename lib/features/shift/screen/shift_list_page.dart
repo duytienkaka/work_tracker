@@ -10,6 +10,7 @@ import '../../work/model/work_model.dart';
 import '../../work/provider/work_provider.dart';
 import '../model/shift_model.dart';
 import '../provider/shift_provider.dart';
+import 'shift_detail_page.dart';
 import 'shift_form_page.dart';
 
 class ShiftListPage extends StatefulWidget {
@@ -233,13 +234,19 @@ class _ShiftListPageState extends State<ShiftListPage> {
   Widget _buildShiftCard(Shift shift, Work work) {
     return AppCard(
       onTap: () async {
+        final shiftProvider = context.read<ShiftProvider>();
+        final currentContext = context;
+
         await Navigator.push(
-          context,
+          currentContext,
           MaterialPageRoute(
-            builder: (_) => ShiftFormPage(work: work, shift: shift),
+            builder: (_) => ShiftDetailPage(work: work, shift: shift),
           ),
         );
-        await context.read<ShiftProvider>().load();
+
+        if (!currentContext.mounted) return;
+        if (!mounted) return;
+        await shiftProvider.load();
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,7 +285,16 @@ class _ShiftListPageState extends State<ShiftListPage> {
                     '${shift.startTime} → ${shift.endTime.isEmpty ? '---' : shift.endTime}',
                 icon: Icons.access_time_rounded,
               ),
-              _Chip(label: work.name, icon: Icons.work_outline_rounded),
+              Hero(
+                tag: 'shift-hero-${shift.id}',
+                child: Material(
+                  color: Colors.transparent,
+                  child: _Chip(
+                    label: work.name,
+                    icon: Icons.work_outline_rounded,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -393,35 +409,6 @@ class _ValueTile extends StatelessWidget {
             style: TextStyle(color: color, fontWeight: FontWeight.w700),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ShiftTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String value;
-  final bool visible;
-
-  const _ShiftTile({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    this.visible = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
       ),
     );
   }

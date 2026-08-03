@@ -38,18 +38,19 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
           IconButton(
             tooltip: 'Thêm ca làm',
             onPressed: () async {
+              final workProvider = context.read<WorkProvider>();
+              final currentContext = context;
+
               await Navigator.push(
-                context,
+                currentContext,
                 MaterialPageRoute(
                   builder: (_) => ShiftFormPage(work: summary.work),
                 ),
               );
 
+              if (!currentContext.mounted) return;
               if (!mounted) return;
-              if (!context.mounted) return;
-              await context.read<WorkProvider>().loadWorkDetail(
-                summary.work.id,
-              );
+              await workProvider.loadWorkDetail(summary.work.id);
             },
             icon: const Icon(Icons.add_circle_outline),
           ),
@@ -116,19 +117,19 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
                       ),
                       trailing: Text(MoneyFormatter.format(shift.income)),
                       onTap: () async {
+                        final workProvider = context.read<WorkProvider>();
+                        final currentContext = context;
+
                         await Navigator.push(
-                          context,
+                          currentContext,
                           MaterialPageRoute(
-                            builder: (_) => ShiftFormPage(
-                              work: summary.work,
-                              shift: shift,
-                            ),
+                            builder: (_) =>
+                                ShiftFormPage(work: summary.work, shift: shift),
                           ),
                         );
+                        if (!currentContext.mounted) return;
                         if (!mounted) return;
-                        await context.read<WorkProvider>().loadWorkDetail(
-                          summary.work.id,
-                        );
+                        await workProvider.loadWorkDetail(summary.work.id);
                       },
                     ),
                   );

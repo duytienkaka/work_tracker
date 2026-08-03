@@ -8,7 +8,7 @@ Work Tracker is a clean, local-first productivity app built with Flutter. It hel
 
 - Work Management
 - Shift Management
-- Dashboard
+- Dashboard with today's revenue, orders, profit, active shift, mini charts, and recent activity
 - Timeline
 - Analytics
 - Settings
@@ -110,6 +110,13 @@ flutter build apk --release
 - [Contributing Guide](CONTRIBUTING.md)
 
 ## Roadmap
+
+### v1.1.0
+
+Released:
+- Dashboard refresh with Material 3 cards, charts, and quick actions
+- Version 1.1.0+1
+- Release verification with `dart format .`, `flutter analyze`, and `flutter test`
 
 ### v1.0.0
 

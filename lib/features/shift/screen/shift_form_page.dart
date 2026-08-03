@@ -138,7 +138,7 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
         padding: const EdgeInsets.all(16),
         children: [
           DropdownButtonFormField<Work>(
-            value: selectedWork,
+            initialValue: selectedWork,
             decoration: const InputDecoration(
               labelText: "Công việc",
               border: OutlineInputBorder(),
@@ -251,6 +251,10 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
               );
 
               final provider = context.read<ShiftProvider>();
+              final dashboardProvider = context.read<DashboardProvider>();
+              final analyticsProvider = context.read<AnalyticsProvider>();
+              final timelineProvider = context.read<TimelineProvider>();
+              final workProvider = context.read<WorkProvider>();
 
               if (isEdit) {
                 await provider.update(shift);
@@ -258,14 +262,13 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                 await provider.add(shift);
               }
 
-              if (!context.mounted) return;
               if (!mounted) return;
-              await context.read<DashboardProvider>().load();
-              await context.read<AnalyticsProvider>().load();
-              await context.read<TimelineProvider>().loadTimeline();
-              await context.read<WorkProvider>().loadWorks();
-              if (!context.mounted) return;
+              await dashboardProvider.load();
+              await analyticsProvider.load();
+              await timelineProvider.loadTimeline();
+              await workProvider.loadWorks();
               if (!mounted) return;
+              if (!context.mounted) return;
               Navigator.pop(context);
             },
           ),

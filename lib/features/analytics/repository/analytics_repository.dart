@@ -1,10 +1,37 @@
 import '../../../core/database/app_database.dart';
+import '../../expense/model/expense_model.dart';
+import '../../income/model/income_model.dart';
+import '../../shift/model/shift_model.dart';
 import '../../work/model/work_model.dart';
 import '../model/analytics_summary.dart';
 import '../model/daily_income.dart';
 import '../model/work_statistic.dart';
 
 class AnalyticsRepository {
+  Future<List<Work>> getWorks() async {
+    final db = await AppDatabase.database();
+    final result = await db.query('works');
+    return result.map((row) => Work.fromMap(row)).toList();
+  }
+
+  Future<List<Shift>> getShifts() async {
+    final db = await AppDatabase.database();
+    final result = await db.query('shifts', orderBy: 'workDate ASC');
+    return result.map((row) => Shift.fromMap(row)).toList();
+  }
+
+  Future<List<Income>> getIncomes() async {
+    final db = await AppDatabase.database();
+    final result = await db.query('income', orderBy: 'created_at ASC');
+    return result.map((row) => Income.fromMap(row)).toList();
+  }
+
+  Future<List<Expense>> getExpenses() async {
+    final db = await AppDatabase.database();
+    final result = await db.query('expense', orderBy: 'created_at ASC');
+    return result.map((row) => Expense.fromMap(row)).toList();
+  }
+
   Future<AnalyticsSummary> getSummary() async {
     final db = await AppDatabase.database();
 

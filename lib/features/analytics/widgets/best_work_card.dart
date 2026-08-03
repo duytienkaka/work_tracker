@@ -7,8 +7,17 @@ import '../model/work_statistic.dart';
 
 class BestWorkCard extends StatelessWidget {
   final WorkStatistic statistic;
+  final String title;
+  final Color accentColor;
+  final IconData icon;
 
-  const BestWorkCard({super.key, required this.statistic});
+  const BestWorkCard({
+    super.key,
+    required this.statistic,
+    this.title = 'Công việc hiệu quả nhất',
+    this.accentColor = AppColors.warning,
+    this.icon = Icons.emoji_events_rounded,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,18 +31,15 @@ class BestWorkCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.16),
+                  color: accentColor.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
-                  Icons.emoji_events_rounded,
-                  color: AppColors.warning,
-                ),
+                child: Icon(icon, color: accentColor),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Công việc hiệu quả nhất',
+                  title,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,

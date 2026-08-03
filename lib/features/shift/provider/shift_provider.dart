@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../expense/model/expense_model.dart';
+import '../../income/model/income_model.dart';
 import '../model/shift_model.dart';
+import '../model/shift_summary.dart';
 import '../repository/shift_repository.dart';
 
 class ShiftProvider extends ChangeNotifier {
@@ -21,6 +24,30 @@ class ShiftProvider extends ChangeNotifier {
 
   double get totalProfit {
     return totalIncome - totalExpense;
+  }
+
+  ShiftSummary buildSummary({
+    required List<Income> incomes,
+    required List<Expense> expenses,
+  }) {
+    final totalIncomeValue = incomes.fold(
+      0.0,
+      (sum, item) => sum + item.amount,
+    );
+    final totalTipValue = incomes.fold(0.0, (sum, item) => sum + item.tip);
+    final totalExpenseValue = expenses.fold(
+      0.0,
+      (sum, item) => sum + item.amount,
+    );
+
+    return ShiftSummary(
+      incomeCount: incomes.length,
+      expenseCount: expenses.length,
+      totalIncome: totalIncomeValue,
+      totalTip: totalTipValue,
+      totalExpense: totalExpenseValue,
+      profit: totalIncomeValue + totalTipValue - totalExpenseValue,
+    );
   }
 
   Future<void> load([String? workId]) async {

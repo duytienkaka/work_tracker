@@ -80,16 +80,27 @@ class _WorkListPageState extends State<WorkListPage> {
                       return WorkCard(
                         summary: summary,
                         onTap: () async {
+                          final dashboardProvider = context
+                              .read<DashboardProvider>();
+                          final analyticsProvider = context
+                              .read<AnalyticsProvider>();
+                          final timelineProvider = context
+                              .read<TimelineProvider>();
+                          final currentContext = context;
+
                           await Navigator.push(
-                            context,
+                            currentContext,
                             MaterialPageRoute(
                               builder: (_) => ShiftFormPage(work: summary.work),
                             ),
                           );
+
+                          if (!currentContext.mounted) return;
+                          if (!mounted) return;
                           await provider.loadWorks();
-                          await context.read<DashboardProvider>().load();
-                          await context.read<AnalyticsProvider>().load();
-                          await context.read<TimelineProvider>().loadTimeline();
+                          await dashboardProvider.load();
+                          await analyticsProvider.load();
+                          await timelineProvider.loadTimeline();
                         },
                         onEdit: () {
                           Navigator.push(

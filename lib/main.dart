@@ -6,6 +6,10 @@ import 'core/theme/app_theme.dart';
 import 'features/analytics/provider/analytics_provider.dart';
 import 'features/dashboard/provider/dashboard_provider.dart';
 import 'features/dashboard/repository/dashboard_repository.dart';
+import 'features/expense/provider/expense_provider.dart';
+import 'features/expense/repository/expense_repository.dart';
+import 'features/income/provider/income_provider.dart';
+import 'features/income/repository/income_repository.dart';
 import 'features/settings/provider/settings_provider.dart';
 import 'features/settings/repository/settings_repository.dart';
 import 'features/shift/provider/shift_provider.dart';
@@ -39,6 +43,15 @@ class WorkTrackerApp extends StatelessWidget {
         Provider(create: (_) => ShiftRepository()),
         ChangeNotifierProvider(
           create: (context) => ShiftProvider(context.read<ShiftRepository>()),
+        ),
+        Provider(create: (_) => IncomeRepository()),
+        ChangeNotifierProvider(
+          create: (context) => IncomeProvider(context.read<IncomeRepository>()),
+        ),
+        Provider(create: (_) => ExpenseRepository()),
+        ChangeNotifierProvider(
+          create: (context) =>
+              ExpenseProvider(context.read<ExpenseRepository>()),
         ),
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),

@@ -55,10 +55,7 @@ class WorkCard extends StatelessWidget {
                     backgroundColor: Color(
                       summary.work.color,
                     ).withValues(alpha: 0.16),
-                    child: Icon(
-                      IconData(summary.work.icon, fontFamily: 'MaterialIcons'),
-                      color: Color(summary.work.color),
-                    ),
+                    child: Icon(Icons.work, color: Color(summary.work.color)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

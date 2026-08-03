@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.1.0
+
+### Added
+- Redesigned dashboard with today's revenue, orders, profit, active shift, recent orders, quick actions, mini charts, and recent expenses
+- Direct dashboard shortcuts for new shift, new work, analytics, timeline, and settings
+- Release verification coverage for dashboard and analytics provider behavior
+
+### Changed
+- Refreshed the main home experience with a cleaner Material 3 layout
+- Updated app version to 1.1.0+1
+
+### Fixed
+- Removed dead dashboard wrapper logic and cleaned dashboard imports
+- Cleared release-time analyzer issues introduced during the dashboard upgrade
+
 ## v1.0.0
 
 ### Added
