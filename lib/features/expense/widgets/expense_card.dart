@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/money_formatter.dart';
 import '../../../theme/app_colors.dart';
 import '../model/expense_model.dart';
 
@@ -49,7 +50,7 @@ class ExpenseCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      expense.amount.toStringAsFixed(0),
+                      MoneyFormatter.format(expense.amount),
                       style: const TextStyle(
                         color: AppColors.danger,
                         fontWeight: FontWeight.w700,

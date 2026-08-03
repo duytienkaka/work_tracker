@@ -2,6 +2,7 @@ import '../../../core/database/app_database.dart';
 import '../../expense/model/expense_model.dart';
 import '../../income/model/income_model.dart';
 import '../../shift/model/shift_model.dart';
+import '../../shift/repository/shift_repository.dart';
 import '../../work/model/work_model.dart';
 import '../model/analytics_summary.dart';
 import '../model/daily_income.dart';
@@ -15,9 +16,8 @@ class AnalyticsRepository {
   }
 
   Future<List<Shift>> getShifts() async {
-    final db = await AppDatabase.database();
-    final result = await db.query('shifts', orderBy: 'workDate ASC');
-    return result.map((row) => Shift.fromMap(row)).toList();
+    final repository = ShiftRepository();
+    return repository.getAll();
   }
 
   Future<List<Income>> getIncomes() async {

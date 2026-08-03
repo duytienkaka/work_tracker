@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../../theme/app_radius.dart';
 import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
@@ -58,8 +60,21 @@ class _ShiftListPageState extends State<ShiftListPage> {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
-              AppCard(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  boxShadow: const [
+                    BoxShadow(
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                      color: Color(0x11000000),
+                    ),
+                  ],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -94,10 +109,13 @@ class _ShiftListPageState extends State<ShiftListPage> {
               const SizedBox(height: AppSpacing.sm),
               SectionTitle(title: 'Danh sách ca làm'),
               if (provider.shifts.isEmpty)
-                const EmptyState(
-                  icon: Icons.schedule_outlined,
-                  title: 'Chưa có ca làm nào',
-                  subtitle: 'Hãy thêm ca làm đầu tiên cho công việc này.',
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: EmptyState(
+                    icon: Icons.schedule_outlined,
+                    title: 'Chưa có ca làm nào',
+                    subtitle: 'Hãy thêm ca làm đầu tiên cho công việc này.',
+                  ),
                 )
               else
                 ...provider.shifts.map((shift) {
@@ -170,10 +188,15 @@ class _ShiftListPageState extends State<ShiftListPage> {
                 const SizedBox(height: 16),
                 Expanded(
                   child: provider.shifts.isEmpty
-                      ? const EmptyState(
-                          icon: Icons.schedule_outlined,
-                          title: 'Chưa có ca làm nào',
-                          subtitle: 'Thêm ca làm mới để bắt đầu.',
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.lg,
+                          ),
+                          child: EmptyState(
+                            icon: Icons.schedule_outlined,
+                            title: 'Chưa có ca làm nào',
+                            subtitle: 'Thêm ca làm mới để bắt đầu.',
+                          ),
                         )
                       : ListView(
                           children: provider.shifts
@@ -220,7 +243,7 @@ class _ShiftListPageState extends State<ShiftListPage> {
         ),
         const Spacer(),
         Text(
-          value.toStringAsFixed(0),
+          MoneyFormatter.format(value),
           style: TextStyle(
             color: color,
             fontSize: 16,
@@ -303,7 +326,7 @@ class _ShiftListPageState extends State<ShiftListPage> {
               Expanded(
                 child: _ValueTile(
                   label: 'Thu nhập',
-                  value: shift.income.toStringAsFixed(0),
+                  value: MoneyFormatter.format(shift.income),
                   color: AppColors.success,
                 ),
               ),
@@ -311,7 +334,7 @@ class _ShiftListPageState extends State<ShiftListPage> {
               Expanded(
                 child: _ValueTile(
                   label: 'Chi phí',
-                  value: shift.expense.toStringAsFixed(0),
+                  value: MoneyFormatter.format(shift.expense),
                   color: AppColors.danger,
                 ),
               ),
@@ -332,7 +355,7 @@ class _ShiftListPageState extends State<ShiftListPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Lợi nhuận: ${shift.profit.toStringAsFixed(0)}',
+                  'Lợi nhuận: ${MoneyFormatter.format(shift.profit)}',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ],

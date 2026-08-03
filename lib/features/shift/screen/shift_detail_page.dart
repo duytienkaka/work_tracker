@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/utils/money_formatter.dart';
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../theme/app_colors.dart';
 import '../../expense/model/expense_model.dart';
@@ -147,25 +149,25 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                 ),
                 _SummaryMetricTile(
                   label: 'Total Income',
-                  value: summary.totalIncome.toStringAsFixed(0),
+                  value: MoneyFormatter.format(summary.totalIncome),
                   color: AppColors.primary,
                   icon: Icons.arrow_upward_rounded,
                 ),
                 _SummaryMetricTile(
                   label: 'Total Tips',
-                  value: summary.totalTip.toStringAsFixed(0),
+                  value: MoneyFormatter.format(summary.totalTip),
                   color: AppColors.success,
                   icon: Icons.tips_and_updates_outlined,
                 ),
                 _SummaryMetricTile(
                   label: 'Total Expense',
-                  value: summary.totalExpense.toStringAsFixed(0),
+                  value: MoneyFormatter.format(summary.totalExpense),
                   color: AppColors.danger,
                   icon: Icons.arrow_downward_rounded,
                 ),
                 _SummaryMetricTile(
                   label: 'Net Profit',
-                  value: summary.profit.toStringAsFixed(0),
+                  value: MoneyFormatter.format(summary.profit),
                   color: profitColor,
                   icon: summary.profit >= 0
                       ? Icons.trending_up_rounded
@@ -520,28 +522,25 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                           final tip = double.tryParse(tipController.text) ?? 0;
 
                           if (title.isEmpty) {
-                            ScaffoldMessenger.of(sheetContext).showSnackBar(
-                              const SnackBar(
-                                content: Text('Title is required.'),
-                              ),
+                            AppFeedback.showError(
+                              sheetContext,
+                              'Tên khoản thu là bắt buộc.',
                             );
                             return;
                           }
 
                           if (amount == null || amount <= 0) {
-                            ScaffoldMessenger.of(sheetContext).showSnackBar(
-                              const SnackBar(
-                                content: Text('Amount must be greater than 0.'),
-                              ),
+                            AppFeedback.showError(
+                              sheetContext,
+                              'Số tiền phải lớn hơn 0.',
                             );
                             return;
                           }
 
                           if (tip < 0) {
-                            ScaffoldMessenger.of(sheetContext).showSnackBar(
-                              const SnackBar(
-                                content: Text('Tip cannot be negative.'),
-                              ),
+                            AppFeedback.showError(
+                              sheetContext,
+                              'Tip không được âm.',
                             );
                             return;
                           }
@@ -568,28 +567,43 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
     final note = noteController.text.trim();
     final currentIncome = income;
 
-    if (currentIncome != null) {
-      await provider.updateIncome(
-        currentIncome.copyWith(
-          title: title,
-          amount: amount,
-          tip: tip,
-          note: note,
-          updatedAt: DateTime.now(),
-        ),
+    final currentContext = context;
+
+    try {
+      if (currentIncome != null) {
+        await provider.updateIncome(
+          currentIncome.copyWith(
+            title: title,
+            amount: amount,
+            tip: tip,
+            note: note,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      } else {
+        await provider.addIncome(
+          Income(
+            id: const Uuid().v4(),
+            shiftId: shift.id,
+            title: title,
+            amount: amount,
+            tip: tip,
+            note: note,
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showSuccess(
+        currentContext,
+        currentIncome != null
+            ? 'Đơn hàng đã được cập nhật.'
+            : 'Đơn hàng đã được thêm.',
       );
-    } else {
-      await provider.addIncome(
-        Income(
-          id: const Uuid().v4(),
-          shiftId: shift.id,
-          title: title,
-          amount: amount,
-          tip: tip,
-          note: note,
-          createdAt: DateTime.now(),
-        ),
-      );
+    } catch (_) {
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showError(currentContext, 'Không thể lưu đơn hàng.');
     }
   }
 
@@ -597,8 +611,9 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
     BuildContext context, {
     Expense? expense,
   }) async {
+    final currentContext = context;
     final isEdit = expense != null;
-    final provider = context.read<ExpenseProvider>();
+    final provider = currentContext.read<ExpenseProvider>();
     final shift = widget.shift;
     if (shift == null) return;
 
@@ -717,31 +732,45 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
     final note = noteController.text.trim();
     final currentExpense = expense;
 
-    if (currentExpense != null) {
-      await provider.updateExpense(
-        currentExpense.copyWith(
-          title: title,
-          amount: amount,
-          note: note,
-          updatedAt: DateTime.now(),
-        ),
+    try {
+      if (currentExpense != null) {
+        await provider.updateExpense(
+          currentExpense.copyWith(
+            title: title,
+            amount: amount,
+            note: note,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      } else {
+        await provider.addExpense(
+          Expense(
+            id: const Uuid().v4(),
+            shiftId: shift.id,
+            title: title,
+            amount: amount,
+            note: note,
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showSuccess(
+        currentContext,
+        currentExpense != null
+            ? 'Chi phí đã được cập nhật.'
+            : 'Chi phí đã được thêm.',
       );
-    } else {
-      await provider.addExpense(
-        Expense(
-          id: const Uuid().v4(),
-          shiftId: shift.id,
-          title: title,
-          amount: amount,
-          note: note,
-          createdAt: DateTime.now(),
-        ),
-      );
+    } catch (_) {
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showError(currentContext, 'Không thể lưu chi phí.');
     }
   }
 
   Future<void> _confirmDeleteIncome(BuildContext context, Income income) async {
-    final provider = context.read<IncomeProvider>();
+    final currentContext = context;
+    final provider = currentContext.read<IncomeProvider>();
     final shift = widget.shift;
     if (shift == null) return;
 
@@ -767,14 +796,22 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
 
     if (confirmed != true) return;
 
-    await provider.deleteIncome(income.id, shift.id);
+    try {
+      await provider.deleteIncome(income.id, shift.id);
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showSuccess(currentContext, 'Đơn hàng đã được xoá.');
+    } catch (_) {
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showError(currentContext, 'Không thể xoá đơn hàng.');
+    }
   }
 
   Future<void> _confirmDeleteExpense(
     BuildContext context,
     Expense expense,
   ) async {
-    final provider = context.read<ExpenseProvider>();
+    final currentContext = context;
+    final provider = currentContext.read<ExpenseProvider>();
     final shift = widget.shift;
     if (shift == null) return;
 
@@ -800,7 +837,14 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
 
     if (confirmed != true) return;
 
-    await provider.deleteExpense(expense.id, shift.id);
+    try {
+      await provider.deleteExpense(expense.id, shift.id);
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showSuccess(currentContext, 'Chi phí đã được xoá.');
+    } catch (_) {
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showError(currentContext, 'Không thể xoá chi phí.');
+    }
   }
 }
 

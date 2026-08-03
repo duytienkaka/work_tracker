@@ -46,12 +46,25 @@ class WorkTrackerApp extends StatelessWidget {
         ),
         Provider(create: (_) => IncomeRepository()),
         ChangeNotifierProvider(
-          create: (context) => IncomeProvider(context.read<IncomeRepository>()),
+          create: (context) => IncomeProvider(
+            context.read<IncomeRepository>(),
+            shiftProvider: context.read<ShiftProvider>(),
+            dashboardProvider: context.read<DashboardProvider>(),
+            analyticsProvider: context.read<AnalyticsProvider>(),
+            workProvider: context.read<WorkProvider>(),
+            timelineProvider: context.read<TimelineProvider>(),
+          ),
         ),
         Provider(create: (_) => ExpenseRepository()),
         ChangeNotifierProvider(
-          create: (context) =>
-              ExpenseProvider(context.read<ExpenseRepository>()),
+          create: (context) => ExpenseProvider(
+            context.read<ExpenseRepository>(),
+            shiftProvider: context.read<ShiftProvider>(),
+            dashboardProvider: context.read<DashboardProvider>(),
+            analyticsProvider: context.read<AnalyticsProvider>(),
+            workProvider: context.read<WorkProvider>(),
+            timelineProvider: context.read<TimelineProvider>(),
+          ),
         ),
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),

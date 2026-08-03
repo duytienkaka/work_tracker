@@ -62,6 +62,10 @@ class ShiftProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshCurrentView() async {
+    await load(_currentWorkId);
+  }
+
   Future<void> add(Shift shift) async {
     await repository.insert(shift);
 

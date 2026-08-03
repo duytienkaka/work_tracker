@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../shift/model/shift_model.dart';
+import '../../shift/repository/shift_repository.dart';
 import '../model/work_model.dart';
 import '../model/work_summary.dart';
 
@@ -45,23 +46,16 @@ class WorkRepository {
   }
 
   Future<List<Shift>> getShiftsByWork(String workId) async {
-    final db = await _db;
-
-    final result = await db.query(
-      "shifts",
-      where: "workId=?",
-      whereArgs: [workId],
-      orderBy: "workDate DESC,startTime DESC",
-    );
-
-    return result.map((e) => Shift.fromMap(e)).toList();
+    final repository = ShiftRepository();
+    return repository.getByWork(workId);
   }
 
   Future<List<WorkSummary>> getWorkSummary() async {
     final db = await _db;
+    final shiftRepository = ShiftRepository();
 
     final works = await db.query("works");
-    final shifts = await db.query("shifts");
+    final shifts = await shiftRepository.getAll();
 
     final List<WorkSummary> result = [];
 
@@ -69,15 +63,15 @@ class WorkRepository {
       final work = Work.fromMap(workMap);
 
       final workShifts = shifts.where((shift) {
-        return shift["workId"] == work.id;
+        return shift.workId == work.id;
       }).toList();
 
       double income = 0;
       double expense = 0;
 
       for (final shift in workShifts) {
-        income += (shift["income"] as num).toDouble();
-        expense += (shift["expense"] as num).toDouble();
+        income += shift.income;
+        expense += shift.expense;
       }
 
       result.add(
@@ -99,19 +93,16 @@ class WorkRepository {
 
   Future<WorkSummary> getSummary(String workId) async {
     final db = await _db;
+    final shiftRepository = ShiftRepository();
 
-    final shifts = await db.query(
-      "shifts",
-      where: "workId=?",
-      whereArgs: [workId],
-    );
+    final shifts = await shiftRepository.getByWork(workId);
 
     double income = 0;
     double expense = 0;
 
     for (final shift in shifts) {
-      income += (shift["income"] as num).toDouble();
-      expense += (shift["expense"] as num).toDouble();
+      income += shift.income;
+      expense += shift.expense;
     }
 
     final work = await db.query("works", where: "id=?", whereArgs: [workId]);

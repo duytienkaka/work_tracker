@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/money_formatter.dart';
 import '../../../theme/app_colors.dart';
 import '../model/income_model.dart';
 
@@ -49,7 +50,7 @@ class IncomeCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      income.amount.toStringAsFixed(0),
+                      MoneyFormatter.format(income.amount),
                       style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w700,
@@ -70,7 +71,7 @@ class IncomeCard extends StatelessWidget {
                   Expanded(
                     child: _SummaryTile(
                       label: 'Tip',
-                      value: income.tip.toStringAsFixed(0),
+                      value: MoneyFormatter.format(income.tip),
                       color: AppColors.success,
                     ),
                   ),

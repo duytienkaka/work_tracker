@@ -55,11 +55,17 @@ class _TimelinePageState extends State<TimelinePage> {
                 ),
               ),
               if (provider.filteredTimeline.isEmpty)
-                const SliverFillRemaining(
-                  child: EmptyState(
-                    icon: Icons.inbox,
-                    title: 'Không tìm thấy dữ liệu',
-                    subtitle: 'Thử tìm kiếm theo ngày, công việc hoặc ghi chú',
+                SliverFillRemaining(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: EmptyState(
+                        icon: Icons.inbox,
+                        title: 'Không tìm thấy dữ liệu',
+                        subtitle:
+                            'Thử tìm kiếm theo ngày, công việc hoặc ghi chú',
+                      ),
+                    ),
                   ),
                 )
               else

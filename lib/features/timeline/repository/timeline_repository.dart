@@ -1,18 +1,11 @@
 import '../../shift/model/shift_model.dart';
+import '../../shift/repository/shift_repository.dart';
 import '../model/timeline_item.dart';
-
-import '../../../core/database/app_database.dart';
 
 class TimelineRepository {
   Future<List<TimelineItem>> getTimeline() async {
-    final db = await AppDatabase.database();
-
-    final result = await db.query(
-      "shifts",
-      orderBy: "workDate DESC,startTime DESC",
-    );
-
-    final shifts = result.map((e) => Shift.fromMap(e)).toList();
+    final repository = ShiftRepository();
+    final shifts = await repository.getAll();
 
     final Map<String, List<Shift>> map = {};
 

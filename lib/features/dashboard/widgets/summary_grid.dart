@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text_styles.dart';
@@ -30,19 +31,19 @@ class SummaryGrid extends StatelessWidget {
       children: [
         _SummaryTile(
           label: 'Tổng thu',
-          value: income.toStringAsFixed(0),
+          value: MoneyFormatter.format(income),
           color: AppColors.primary,
           icon: Icons.arrow_downward_rounded,
         ),
         _SummaryTile(
           label: 'Tổng chi',
-          value: expense.toStringAsFixed(0),
+          value: MoneyFormatter.format(expense),
           color: AppColors.danger,
           icon: Icons.arrow_upward_rounded,
         ),
         _SummaryTile(
           label: 'Lợi nhuận',
-          value: profit.toStringAsFixed(0),
+          value: MoneyFormatter.format(profit),
           color: AppColors.success,
           icon: Icons.account_balance_wallet_rounded,
         ),

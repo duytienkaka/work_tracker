@@ -80,7 +80,11 @@ class _DashboardViewState extends State<DashboardView>
 
     if (dashboardProvider.dashboard == null ||
         analyticsProvider.summary == null) {
-      return const Scaffold(body: LoadingView());
+      return const Scaffold(
+        body: Center(
+          child: Padding(padding: EdgeInsets.all(24), child: LoadingView()),
+        ),
+      );
     }
 
     final dashboard = dashboardProvider.dashboard!;

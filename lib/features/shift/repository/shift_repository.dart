@@ -16,7 +16,8 @@ class ShiftRepository {
       orderBy: "workDate DESC",
     );
 
-    return result.map((e) => Shift.fromMap(e)).toList();
+    final shifts = result.map((e) => Shift.fromMap(e)).toList();
+    return Future.wait(shifts.map(_hydrateShiftTotals));
   }
 
   Future<void> insert(Shift shift) async {
@@ -54,6 +55,47 @@ class ShiftRepository {
       orderBy: "workDate DESC,startTime DESC",
     );
 
-    return result.map((e) => Shift.fromMap(e)).toList();
+    final shifts = result.map((e) => Shift.fromMap(e)).toList();
+    return Future.wait(shifts.map(_hydrateShiftTotals));
+  }
+
+  Future<Shift?> getById(String id) async {
+    final db = await _db;
+
+    final result = await db.query(
+      "shifts",
+      where: "id=?",
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+    return _hydrateShiftTotals(Shift.fromMap(result.first));
+  }
+
+  Future<Shift> _hydrateShiftTotals(Shift shift) async {
+    final db = await _db;
+
+    final incomeRows = await db.query(
+      'income',
+      where: 'shift_id=?',
+      whereArgs: [shift.id],
+    );
+
+    final expenseRows = await db.query(
+      'expense',
+      where: 'shift_id=?',
+      whereArgs: [shift.id],
+    );
+
+    final totalIncome = incomeRows.fold<double>(0, (sum, row) {
+      return sum + (row['amount'] as num).toDouble();
+    });
+
+    final totalExpense = expenseRows.fold<double>(0, (sum, row) {
+      return sum + (row['amount'] as num).toDouble();
+    });
+
+    return shift.copyWith(income: totalIncome, expense: totalExpense);
   }
 }

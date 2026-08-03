@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
@@ -41,7 +42,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           final dashboard = analytics.dashboard;
 
           if (analytics.isLoading || dashboard == null) {
-            return const LoadingView();
+            return const Center(
+              child: Padding(padding: EdgeInsets.all(24), child: LoadingView()),
+            );
           }
 
           return ListView(
@@ -52,35 +55,46 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSpacing.md),
-              _TimeFilterSection(
-                selectedFilter: analytics.selectedFilter,
-                customRangeLabel:
-                    analytics.selectedFilter == AnalyticsTimeFilter.customRange
-                    ? '${_formatDate(dashboard.range.start)} - ${_formatDate(dashboard.range.end)}'
-                    : null,
-                onFilterSelected: (filter) async {
-                  final analyticsProvider = context.read<AnalyticsProvider>();
-                  final currentContext = context;
+              if (dashboard.revenue7Days.isEmpty &&
+                  dashboard.monthlyRevenue.isEmpty &&
+                  dashboard.expenseSeries.isEmpty &&
+                  dashboard.profitSeries.isEmpty)
+                const EmptyState(
+                  icon: Icons.insights_rounded,
+                  title: 'Chưa có dữ liệu phân tích',
+                  subtitle: 'Thêm ca làm và giao dịch để xem biểu đồ thống kê.',
+                )
+              else
+                _TimeFilterSection(
+                  selectedFilter: analytics.selectedFilter,
+                  customRangeLabel:
+                      analytics.selectedFilter ==
+                          AnalyticsTimeFilter.customRange
+                      ? '${_formatDate(dashboard.range.start)} - ${_formatDate(dashboard.range.end)}'
+                      : null,
+                  onFilterSelected: (filter) async {
+                    final analyticsProvider = context.read<AnalyticsProvider>();
+                    final currentContext = context;
 
-                  if (filter == AnalyticsTimeFilter.customRange) {
-                    final range = await showDateRangePicker(
-                      context: currentContext,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDateRange: analytics.customRange,
-                    );
+                    if (filter == AnalyticsTimeFilter.customRange) {
+                      final range = await showDateRangePicker(
+                        context: currentContext,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        initialDateRange: analytics.customRange,
+                      );
+
+                      if (!currentContext.mounted) return;
+                      if (range != null) {
+                        await analyticsProvider.setFilter(filter, range: range);
+                      }
+                      return;
+                    }
 
                     if (!currentContext.mounted) return;
-                    if (range != null) {
-                      await analyticsProvider.setFilter(filter, range: range);
-                    }
-                    return;
-                  }
-
-                  if (!currentContext.mounted) return;
-                  await analyticsProvider.setFilter(filter);
-                },
-              ),
+                    await analyticsProvider.setFilter(filter);
+                  },
+                ),
               const SizedBox(height: AppSpacing.md),
               _MetricsGrid(dashboard: dashboard),
               const SizedBox(height: AppSpacing.md),

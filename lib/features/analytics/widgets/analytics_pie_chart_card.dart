@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../theme/app_colors.dart';
 
@@ -117,7 +118,7 @@ class _LegendItem extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Text(
-          '$label (${value.toStringAsFixed(0)})',
+          '$label (${MoneyFormatter.format(value)})',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
       ],

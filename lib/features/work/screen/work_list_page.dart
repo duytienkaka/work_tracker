@@ -61,60 +61,71 @@ class _WorkListPageState extends State<WorkListPage> {
           ),
           Expanded(
             child: provider.filteredWorks.isEmpty
-                ? const EmptyState(
-                    icon: Icons.work_outline,
-                    title: 'Chưa có công việc',
-                    subtitle: 'Hãy thêm công việc đầu tiên để bắt đầu.',
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      0,
-                      AppSpacing.md,
-                      AppSpacing.xl,
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.md),
+                      child: EmptyState(
+                        icon: Icons.work_outline,
+                        title: 'Chưa có công việc',
+                        subtitle: 'Hãy thêm công việc đầu tiên để bắt đầu.',
+                      ),
                     ),
-                    itemCount: provider.filteredSummaries.length,
-                    itemBuilder: (context, index) {
-                      final summary = provider.filteredSummaries[index];
+                  )
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: ListView.builder(
+                      key: ValueKey(provider.filteredSummaries.length),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        0,
+                        AppSpacing.md,
+                        AppSpacing.xl,
+                      ),
+                      itemCount: provider.filteredSummaries.length,
+                      itemBuilder: (context, index) {
+                        final summary = provider.filteredSummaries[index];
 
-                      return WorkCard(
-                        summary: summary,
-                        onTap: () async {
-                          final dashboardProvider = context
-                              .read<DashboardProvider>();
-                          final analyticsProvider = context
-                              .read<AnalyticsProvider>();
-                          final timelineProvider = context
-                              .read<TimelineProvider>();
-                          final currentContext = context;
+                        return WorkCard(
+                          summary: summary,
+                          onTap: () async {
+                            final dashboardProvider = context
+                                .read<DashboardProvider>();
+                            final analyticsProvider = context
+                                .read<AnalyticsProvider>();
+                            final timelineProvider = context
+                                .read<TimelineProvider>();
+                            final currentContext = context;
 
-                          await Navigator.push(
-                            currentContext,
-                            MaterialPageRoute(
-                              builder: (_) => ShiftFormPage(work: summary.work),
-                            ),
-                          );
+                            await Navigator.push(
+                              currentContext,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ShiftFormPage(work: summary.work),
+                              ),
+                            );
 
-                          if (!currentContext.mounted) return;
-                          if (!mounted) return;
-                          await provider.loadWorks();
-                          await dashboardProvider.load();
-                          await analyticsProvider.load();
-                          await timelineProvider.loadTimeline();
-                        },
-                        onEdit: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => WorkFormPage(work: summary.work),
-                            ),
-                          );
-                        },
-                        onDelete: () async {
-                          await provider.deleteWork(summary.work.id);
-                        },
-                      );
-                    },
+                            if (!currentContext.mounted) return;
+                            if (!mounted) return;
+                            await provider.loadWorks();
+                            await dashboardProvider.load();
+                            await analyticsProvider.load();
+                            await timelineProvider.loadTimeline();
+                          },
+                          onEdit: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    WorkFormPage(work: summary.work),
+                              ),
+                            );
+                          },
+                          onDelete: () async {
+                            await provider.deleteWork(summary.work.id);
+                          },
+                        );
+                      },
+                    ),
                   ),
           ),
         ],

@@ -16,6 +16,7 @@ class WorkProvider extends ChangeNotifier {
   List<WorkSummary> summaries = [];
   List<WorkSummary> _searchSummaries = [];
   List<Shift> currentWorkShifts = [];
+  String? currentWorkDetailId;
 
   List<WorkSummary> get filteredSummaries => _searchSummaries;
 
@@ -58,8 +59,14 @@ class WorkProvider extends ChangeNotifier {
   }
 
   Future<void> loadWorkDetail(String workId) async {
+    currentWorkDetailId = workId;
     currentWorkShifts = await repository.getShiftsByWork(workId);
     notifyListeners();
+  }
+
+  Future<void> refreshCurrentWorkDetail() async {
+    if (currentWorkDetailId == null) return;
+    await loadWorkDetail(currentWorkDetailId!);
   }
 
   Future<WorkSummary> getSummary(String id) {

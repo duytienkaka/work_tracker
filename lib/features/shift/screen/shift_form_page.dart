@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../analytics/provider/analytics_provider.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
@@ -229,9 +230,12 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
             text: isEdit ? "Cập nhật" : "Lưu",
             icon: Icons.save,
             onPressed: () async {
+              final currentContext = context;
+
               if (selectedWork == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Vui lòng chọn công việc.')),
+                AppFeedback.showError(
+                  currentContext,
+                  'Vui lòng chọn công việc.',
                 );
                 return;
               }
@@ -250,26 +254,43 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                 note: noteController.text,
               );
 
-              final provider = context.read<ShiftProvider>();
-              final dashboardProvider = context.read<DashboardProvider>();
-              final analyticsProvider = context.read<AnalyticsProvider>();
-              final timelineProvider = context.read<TimelineProvider>();
-              final workProvider = context.read<WorkProvider>();
+              final provider = currentContext.read<ShiftProvider>();
+              final dashboardProvider = currentContext
+                  .read<DashboardProvider>();
+              final analyticsProvider = currentContext
+                  .read<AnalyticsProvider>();
+              final timelineProvider = currentContext.read<TimelineProvider>();
+              final workProvider = currentContext.read<WorkProvider>();
 
-              if (isEdit) {
-                await provider.update(shift);
-              } else {
-                await provider.add(shift);
+              try {
+                if (isEdit) {
+                  await provider.update(shift);
+                } else {
+                  await provider.add(shift);
+                }
+
+                if (!mounted || !currentContext.mounted) return;
+                AppFeedback.showSuccess(
+                  currentContext,
+                  isEdit ? 'Ca làm đã được cập nhật.' : 'Ca làm đã được tạo.',
+                );
+
+                await dashboardProvider.load();
+                await analyticsProvider.load();
+                await timelineProvider.loadTimeline();
+                await workProvider.loadWorks();
+
+                if (!mounted || !currentContext.mounted) return;
+                Navigator.pop(currentContext);
+              } catch (_) {
+                if (!mounted || !currentContext.mounted) return;
+                if (currentContext.mounted) {
+                  AppFeedback.showError(
+                    currentContext,
+                    'Không thể lưu ca làm.',
+                  );
+                }
               }
-
-              if (!mounted) return;
-              await dashboardProvider.load();
-              await analyticsProvider.load();
-              await timelineProvider.loadTimeline();
-              await workProvider.loadWorks();
-              if (!mounted) return;
-              if (!context.mounted) return;
-              Navigator.pop(context);
             },
           ),
         ],
