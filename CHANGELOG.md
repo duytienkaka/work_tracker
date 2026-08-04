@@ -2,79 +2,121 @@
 
 All notable changes to this project will be documented in this file.
 
+The format is inspired by **Keep a Changelog**, and this project follows **Semantic Versioning**.
+
+---
+
+## [1.3.2] - 2026-08-04
+
+### Fixed
+
+* Added **Edit** and **Delete** actions for Shift.
+* Added confirmation dialog before deleting a Shift.
+* Deleting a Shift now removes all related Income and Expense records.
+* Prevented overlapping shifts within the same Work.
+* Added validation requiring Start Time and End Time for Hourly and Daily work types.
+* Freelance shifts remain optional for time input.
+* Improved validation messages during Shift creation and editing.
+* Refined the Settings screen for a more consistent UI.
+
+### Changed
+
+* Improved Shift creation workflow.
+* Improved overall UX consistency.
+
 ---
 
 ## [1.3.1] - 2026-08-04
 
+### Added
+
+* Floating action button in Work Detail for easier one-handed usage.
+* Vietnamese localization across the application.
+* Work-type-aware labels for manual income entries.
+* Better handling of Active Shift selection.
+
+### Changed
+
+* Removed Analytics page from the main navigation (reserved for future development).
+* Improved Active Shift detection logic.
+* Updated Work Detail workflow and navigation.
+
 ### Fixed
 
-- Fixed Active Shift selection logic.
-- Fixed Dashboard incorrectly showing "No Shift".
-- Fixed Work deletion leaving orphan Shift/Income/Expense data.
-- Fixed Summary Card overflow.
-- Fixed money formatter rounding display.
+* Fixed incorrect Active Shift selection when multiple shifts exist on the same day.
+* Improved manual income presentation for Hourly and Daily jobs.
+* Various UI consistency improvements.
+
+---
+
+## [1.3.0] - 2026-08-03
+
+### Added
+
+* Work Type system:
+
+  * Freelance
+  * Hourly
+  * Daily
+* Salary Engine.
+* Automatic salary generation for Hourly and Daily jobs.
+* Generated Income protection.
+* Shift Summary engine.
 
 ### Changed
 
-- Improved Work and Shift workflow.
-- Unified realtime refresh after CRUD operations.
-- Vietnamese localization across the UI.
-- Replaced top AppBar add buttons with Floating Action Button.
-- Simplified Shift creation flow.
-- Improved generated salary handling.
+* Refactored Shift calculation flow.
+* Centralized salary calculation logic.
+* Simplified Work Type architecture.
 
 ---
 
-## [1.3.0] - 2026-08-04
+## [1.2.0] - 2026-08-02
 
 ### Added
 
-- Work Type system
-  - Freelance
-  - Hourly
-  - Daily
-- Salary Engine
-- Auto-generated Salary Income
-- Generated Income protection
-- Shift Summary Engine
+* Expense management.
+* Expense CRUD.
+* Shift Summary.
+* Profit calculation.
+* Real-time synchronization between Income, Expense, Dashboard and Timeline.
 
 ### Changed
 
-- Shift calculation moved to Salary Engine.
-- Work type determines salary calculation automatically.
+* Unified Money Formatter.
+* Improved Work Detail UI.
+* Improved Shift Detail UI.
 
 ---
 
-## [1.2.0]
+## [1.1.0] - 2026-08-01
 
 ### Added
 
-- Expense Management
-- Expense CRUD
-- Expense Provider
-- Expense Repository
-- Shift Summary
-- Realtime synchronization
+* Income CRUD.
+* Shift Detail page.
+* Income validation.
+* Provider-based income management.
+
+### Changed
+
+* Improved Shift workflow.
+* Improved Work Detail experience.
 
 ---
 
-## [1.1.0]
+## [1.0.0] - 2026-07-31
 
-### Added
+### Initial Release
 
-- Income CRUD
-- Shift Detail
-- Income Management
-- Provider architecture improvements
+Features included:
 
----
-
-## [1.0.0]
-
-### Added
-
-- Work Management
-- Shift Management
-- Dashboard
-- Timeline
-- Local SQLite database
+* Work management
+* Shift management
+* Timeline
+* Dashboard
+* Local SQLite storage
+* Settings
+* Export support
+* Provider architecture
+* Material 3 UI

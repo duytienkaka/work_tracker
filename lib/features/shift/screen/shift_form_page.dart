@@ -27,7 +27,7 @@ class ShiftFormPage extends StatefulWidget {
 class _ShiftFormPageState extends State<ShiftFormPage> {
   DateTime workDate = DateTime.now();
 
-  TimeOfDay startTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay? startTime;
 
   TimeOfDay? endTime;
 
@@ -39,14 +39,15 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
   String get formattedDuration {
     if (selectedWork == null) return '---';
     if (selectedWork!.salaryType != Work.hourly) return '---';
+    if (startTime == null) return 'Chưa có';
+    if (endTime == null) return 'Chưa có';
     final start = DateTime(
       workDate.year,
       workDate.month,
       workDate.day,
-      startTime.hour,
-      startTime.minute,
+      startTime!.hour,
+      startTime!.minute,
     );
-    if (endTime == null) return 'Chưa có';
     final end = DateTime(
       workDate.year,
       workDate.month,
@@ -90,14 +91,21 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
       workDate = widget.shift!.workDate;
 
       final start = widget.shift!.startTime.split(":");
-      startTime = TimeOfDay(
-        hour: int.parse(start[0]),
-        minute: int.parse(start[1]),
-      );
+      if (start.length == 2) {
+        startTime = TimeOfDay(
+          hour: int.parse(start[0]),
+          minute: int.parse(start[1]),
+        );
+      }
 
       if (widget.shift!.endTime.isNotEmpty) {
         final end = widget.shift!.endTime.split(":");
-        endTime = TimeOfDay(hour: int.parse(end[0]), minute: int.parse(end[1]));
+        if (end.length == 2) {
+          endTime = TimeOfDay(
+            hour: int.parse(end[0]),
+            minute: int.parse(end[1]),
+          );
+        }
       }
 
       noteController.text = widget.shift!.note;
@@ -128,7 +136,7 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
   Future<void> pickStartTime() async {
     final result = await showTimePicker(
       context: context,
-      initialTime: startTime,
+      initialTime: startTime ?? const TimeOfDay(hour: 8, minute: 0),
     );
 
     if (result != null) {
@@ -141,7 +149,7 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
   Future<void> pickEndTime() async {
     final result = await showTimePicker(
       context: context,
-      initialTime: endTime ?? startTime,
+      initialTime: endTime ?? startTime ?? const TimeOfDay(hour: 8, minute: 0),
     );
 
     if (result != null) {
@@ -198,7 +206,11 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'Lương dự kiến: ${MoneyFormatter.format(selectedWork!.computeSalaryForShift(startDateTime: DateTime(workDate.year, workDate.month, workDate.day, startTime.hour, startTime.minute), endDateTime: endTime != null ? DateTime(workDate.year, workDate.month, workDate.day, endTime!.hour, endTime!.minute) : null))}',
+                      selectedWork!.salaryType == Work.hourly
+                          ? (startTime != null && endTime != null
+                                ? 'Lương dự kiến: ${MoneyFormatter.format(selectedWork!.computeSalaryForShift(startDateTime: DateTime(workDate.year, workDate.month, workDate.day, startTime!.hour, startTime!.minute), endDateTime: DateTime(workDate.year, workDate.month, workDate.day, endTime!.hour, endTime!.minute)))}'
+                                : 'Lương dự kiến: Chưa đủ dữ liệu')
+                          : 'Lương dự kiến: ${MoneyFormatter.format(selectedWork!.computeSalaryForShift(startDateTime: DateTime(workDate.year, workDate.month, workDate.day, 0, 0), endDateTime: null))}',
                       style: const TextStyle(color: Colors.grey),
                     ),
                   ),
@@ -218,7 +230,19 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
           ListTile(
             leading: const Icon(Icons.access_time),
             title: const Text("Giờ bắt đầu"),
-            subtitle: Text(startTime.format(context)),
+            subtitle: Text(
+              startTime != null ? startTime!.format(context) : 'Chưa có',
+            ),
+            trailing: startTime != null
+                ? IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        startTime = null;
+                      });
+                    },
+                  )
+                : null,
             onTap: pickStartTime,
           ),
 
@@ -285,12 +309,102 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                 return;
               }
 
+              if (selectedWork!.salaryType == Work.hourly ||
+                  selectedWork!.salaryType == Work.daily) {
+                if (startTime == null) {
+                  AppFeedback.showError(
+                    currentContext,
+                    'Bạn cần nhập giờ bắt đầu.',
+                  );
+                  return;
+                }
+
+                if (endTime == null) {
+                  AppFeedback.showError(
+                    currentContext,
+                    'Bạn cần nhập giờ kết thúc.',
+                  );
+                  return;
+                }
+
+                final start = DateTime(
+                  workDate.year,
+                  workDate.month,
+                  workDate.day,
+                  startTime!.hour,
+                  startTime!.minute,
+                );
+                final end = DateTime(
+                  workDate.year,
+                  workDate.month,
+                  workDate.day,
+                  endTime!.hour,
+                  endTime!.minute,
+                );
+
+                if (!end.isAfter(start)) {
+                  AppFeedback.showError(
+                    currentContext,
+                    'Giờ kết thúc phải sau giờ bắt đầu.',
+                  );
+                  return;
+                }
+              }
+
+              final provider = currentContext.read<ShiftProvider>();
+              final existingShifts = provider.shifts.where((item) {
+                if (item.workId != selectedWork!.id) return false;
+                if (item.workDate != workDate) return false;
+                if (isEdit && item.id == widget.shift?.id) return false;
+                return true;
+              }).toList();
+
+              if (selectedWork!.salaryType != Work.freelance &&
+                  startTime != null &&
+                  endTime != null) {
+                final newStart = DateTime(
+                  workDate.year,
+                  workDate.month,
+                  workDate.day,
+                  startTime!.hour,
+                  startTime!.minute,
+                );
+                final newEnd = DateTime(
+                  workDate.year,
+                  workDate.month,
+                  workDate.day,
+                  endTime!.hour,
+                  endTime!.minute,
+                );
+
+                for (final existing in existingShifts) {
+                  if (existing.startDateTime == null ||
+                      existing.endDateTime == null) {
+                    continue;
+                  }
+
+                  final existingStart = existing.startDateTime!;
+                  final existingEnd = existing.endDateTime!;
+                  final overlap =
+                      newStart.isBefore(existingEnd) &&
+                      newEnd.isAfter(existingStart);
+                  if (overlap) {
+                    AppFeedback.showError(
+                      currentContext,
+                      'Ca làm bị trùng với một ca khác.',
+                    );
+                    return;
+                  }
+                }
+              }
+
               final shift = Shift(
                 id: isEdit ? widget.shift!.id : const Uuid().v4(),
                 workId: selectedWork!.id,
                 workDate: workDate,
-                startTime:
-                    "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}",
+                startTime: startTime != null
+                    ? "${startTime!.hour.toString().padLeft(2, '0')}:${startTime!.minute.toString().padLeft(2, '0')}"
+                    : '',
                 endTime: endTime != null
                     ? "${endTime!.hour.toString().padLeft(2, '0')}:${endTime!.minute.toString().padLeft(2, '0')}"
                     : '',
@@ -299,7 +413,6 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                 note: noteController.text,
               );
 
-              final provider = currentContext.read<ShiftProvider>();
               final dashboardProvider = currentContext
                   .read<DashboardProvider>();
               final analyticsProvider = currentContext

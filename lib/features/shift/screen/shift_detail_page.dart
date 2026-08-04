@@ -38,7 +38,32 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
     final shift = widget.shift;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Chi tiết ca làm')),
+      appBar: AppBar(
+        title: const Text('Chi tiết ca làm'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Sửa ca làm',
+            onPressed: shift == null
+                ? null
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ShiftFormPage(work: work, shift: shift),
+                      ),
+                    );
+                  },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            tooltip: 'Xóa ca làm',
+            onPressed: shift == null
+                ? null
+                : () => _confirmDeleteShift(context, shift),
+          ),
+        ],
+      ),
       body: shift == null
           ? const Center(child: Text('Không có dữ liệu ca làm'))
           : ListView(
@@ -872,6 +897,49 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
     } catch (_) {
       if (!mounted || !currentContext.mounted) return;
       AppFeedback.showError(currentContext, 'Không thể xoá chi phí.');
+    }
+  }
+
+  Future<void> _confirmDeleteShift(BuildContext context, Shift shift) async {
+    final currentContext = context;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Xóa ca làm?'),
+          content: const Text(
+            'Bạn có chắc muốn xóa ca này?\n\n'
+            'Việc này sẽ xóa:\n'
+            '• Shift\n'
+            '• Income\n'
+            '• Expense\n\n'
+            'Không thể hoàn tác.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Huỷ'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Xóa'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final provider = currentContext.read<ShiftProvider>();
+      await provider.delete(shift.id, shift.workId);
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showSuccess(currentContext, 'Ca làm đã được xóa.');
+      Navigator.pop(currentContext);
+    } catch (_) {
+      if (!mounted || !currentContext.mounted) return;
+      AppFeedback.showError(currentContext, 'Không thể xóa ca làm.');
     }
   }
 }

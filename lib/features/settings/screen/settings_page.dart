@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_feedback.dart';
+import '../../../shared/widgets/section_title.dart';
 import '../../analytics/provider/analytics_provider.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
 import '../../shift/provider/shift_provider.dart';
@@ -27,75 +29,52 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'Theme',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: SegmentedButton<AppThemeMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: AppThemeMode.system,
-                    label: Text('System'),
-                  ),
-                  ButtonSegment(
-                    value: AppThemeMode.light,
-                    label: Text('Light'),
-                  ),
-                  ButtonSegment(value: AppThemeMode.dark, label: Text('Dark')),
-                ],
-                selected: {themeMode},
-                onSelectionChanged: (selection) {
-                  if (selection.isNotEmpty) {
-                    provider.updateThemeMode(selection.first);
-                  }
-                },
-              ),
+          const SectionTitle(title: 'Theme'),
+          AppCard(
+            padding: const EdgeInsets.all(16),
+            child: SegmentedButton<AppThemeMode>(
+              segments: const [
+                ButtonSegment(
+                  value: AppThemeMode.system,
+                  label: Text('System'),
+                ),
+                ButtonSegment(value: AppThemeMode.light, label: Text('Light')),
+                ButtonSegment(value: AppThemeMode.dark, label: Text('Dark')),
+              ],
+              selected: {themeMode},
+              onSelectionChanged: (selection) {
+                if (selection.isNotEmpty) {
+                  provider.updateThemeMode(selection.first);
+                }
+              },
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Currency',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: SegmentedButton<CurrencyOption>(
-                segments: CurrencyOption.values
-                    .map(
-                      (option) => ButtonSegment(
-                        value: option,
-                        label: Text(option.label),
-                      ),
-                    )
-                    .toList(),
-                selected: {currency},
-                onSelectionChanged: (selection) {
-                  if (selection.isNotEmpty) {
-                    provider.updateCurrency(selection.first);
-                  }
-                },
-              ),
+          const SectionTitle(title: 'Currency'),
+          AppCard(
+            padding: const EdgeInsets.all(16),
+            child: SegmentedButton<CurrencyOption>(
+              segments: CurrencyOption.values
+                  .map(
+                    (option) =>
+                        ButtonSegment(value: option, label: Text(option.label)),
+                  )
+                  .toList(),
+              selected: {currency},
+              onSelectionChanged: (selection) {
+                if (selection.isNotEmpty) {
+                  provider.updateCurrency(selection.first);
+                }
+              },
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Data',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Card(
+          const SectionTitle(title: 'Data'),
+          AppCard(
             child: Column(
               children: [
                 ListTile(
+                  leading: const Icon(Icons.file_download_outlined),
                   title: const Text('Export Shift to CSV'),
                   subtitle: const Text('Lưu file vào thư mục Download'),
-                  trailing: const Icon(Icons.file_download_outlined),
                   onTap: () async {
                     final shiftProvider = context.read<ShiftProvider>();
                     final service = ExportService();
@@ -215,19 +194,14 @@ class SettingsPage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Information',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Card(
+          const SectionTitle(title: 'Information'),
+          AppCard(
             child: Column(
               children: [
                 ListTile(
+                  leading: const Icon(Icons.info_outline),
                   title: const Text('About'),
                   subtitle: const Text('App version and platform details'),
-                  leading: const Icon(Icons.info_outline),
                   onTap: () {
                     showAboutDialog(
                       context: context,
@@ -240,9 +214,9 @@ class SettingsPage extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined),
                   title: const Text('Privacy'),
                   subtitle: const Text('Xem chính sách riêng tư'),
-                  leading: const Icon(Icons.privacy_tip_outlined),
                   onTap: () {
                     if (!context.mounted) return;
                     Navigator.push(
@@ -253,9 +227,9 @@ class SettingsPage extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
+                  leading: const Icon(Icons.verified_user_outlined),
                   title: const Text('License'),
                   subtitle: const Text('Open Flutter license page'),
-                  leading: const Icon(Icons.verified_user_outlined),
                   onTap: () {
                     if (!context.mounted) return;
                     showLicensePage(
