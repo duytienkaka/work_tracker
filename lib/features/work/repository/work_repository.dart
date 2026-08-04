@@ -74,6 +74,43 @@ class WorkRepository {
     });
   }
 
+  Future<Map<String, int>> getDeleteSummary(String workId) async {
+    final db = await _db;
+
+    final shiftRows = await db.query(
+      'shifts',
+      columns: ['id'],
+      where: 'workId = ?',
+      whereArgs: [workId],
+    );
+    final shiftIds = shiftRows
+        .map((row) => row['id'])
+        .whereType<String>()
+        .toList();
+
+    final incomeCount = shiftIds.isEmpty
+        ? 0
+        : (await db.rawQuery(
+                'SELECT COUNT(*) as count FROM income WHERE shift_id IN (${List.filled(shiftIds.length, '?').join(',')})',
+                shiftIds,
+              )).first['count']
+              as int;
+
+    final expenseCount = shiftIds.isEmpty
+        ? 0
+        : (await db.rawQuery(
+                'SELECT COUNT(*) as count FROM expense WHERE shift_id IN (${List.filled(shiftIds.length, '?').join(',')})',
+                shiftIds,
+              )).first['count']
+              as int;
+
+    return {
+      'shifts': shiftIds.length,
+      'income': incomeCount,
+      'expense': expenseCount,
+    };
+  }
+
   Future<List<Shift>> getShiftsByWork(String workId) async {
     final repository = ShiftRepository();
     return repository.getByWork(workId);

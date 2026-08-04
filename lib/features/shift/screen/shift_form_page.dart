@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../theme/app_colors.dart';
 import '../../analytics/provider/analytics_provider.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
 import '../../timeline/provider/timeline_provider.dart';
@@ -33,10 +33,6 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
 
   Work? selectedWork;
   List<Work> availableWorks = [];
-
-  final incomeController = TextEditingController();
-
-  final expenseController = TextEditingController();
 
   final noteController = TextEditingController();
 
@@ -104,18 +100,12 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
         endTime = TimeOfDay(hour: int.parse(end[0]), minute: int.parse(end[1]));
       }
 
-      incomeController.text = widget.shift!.income.toString();
-
-      expenseController.text = widget.shift!.expense.toString();
-
       noteController.text = widget.shift!.note;
     }
   }
 
   @override
   void dispose() {
-    incomeController.dispose();
-    expenseController.dispose();
     noteController.dispose();
     super.dispose();
   }
@@ -259,29 +249,16 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
           ],
 
           const SizedBox(height: 16),
-
-          if (!isDaily) ...[
-            TextField(
-              controller: incomeController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-              ],
-              decoration: const InputDecoration(labelText: "Thu nhập"),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(14),
             ),
-
-            const SizedBox(height: 16),
-          ],
-
-          TextField(
-            controller: expenseController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-            ],
-            decoration: const InputDecoration(labelText: "Chi phí"),
+            child: const Text(
+              'Thu nhập lương và chi phí sẽ được quản lý ở màn hình chi tiết ca làm sau khi lưu.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
 
           const SizedBox(height: 16),
@@ -317,10 +294,8 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                 endTime: endTime != null
                     ? "${endTime!.hour.toString().padLeft(2, '0')}:${endTime!.minute.toString().padLeft(2, '0')}"
                     : '',
-                income: isDaily
-                    ? 0
-                    : double.tryParse(incomeController.text) ?? 0,
-                expense: double.tryParse(expenseController.text) ?? 0,
+                income: 0,
+                expense: 0,
                 note: noteController.text,
               );
 

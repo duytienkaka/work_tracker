@@ -8,7 +8,6 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../theme/app_colors.dart';
 import '../../analytics/provider/analytics_provider.dart';
-import '../../analytics/screen/analytics_page.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
 import '../../expense/model/expense_model.dart';
 import '../../income/model/income_model.dart';
@@ -96,7 +95,11 @@ class _DashboardViewState extends State<DashboardView>
     );
     final recentOrders = _recentIncomeItems(analyticsProvider.incomeItems);
     final recentExpenses = _recentExpenses(analyticsProvider.expenseItems);
-    final activeShift = _activeShift(dashboard.recentShift, today);
+    final activeShift = _activeShift(
+      dashboard.recentShift,
+      today,
+      DateTime.now(),
+    );
     final activeWork = activeShift == null
         ? null
         : _workForShift(activeShift.workId, analyticsProvider.works);
@@ -151,44 +154,44 @@ class _DashboardViewState extends State<DashboardView>
                             SizedBox(
                               width: itemWidth,
                               child: _MetricCard(
-                                title: 'Today\'s Revenue',
+                                title: 'Doanh thu hôm nay',
                                 value: MoneyFormatter.format(
                                   dashboard.incomeToday,
                                 ),
                                 icon: Icons.payments_rounded,
                                 accent: AppColors.primary,
-                                subtitle: 'Tổng doanh thu hôm nay',
+                                subtitle: 'Tổng doanh thu trong ngày',
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
                               child: _MetricCard(
-                                title: 'Today\'s Orders',
+                                title: 'Số đơn hôm nay',
                                 value: '${todayOrders.length}',
                                 icon: Icons.receipt_long_rounded,
                                 accent: AppColors.secondary,
-                                subtitle: 'Số đơn đã ghi nhận',
+                                subtitle: 'Số đơn đã ghi nhận trong ngày',
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
                               child: _MetricCard(
-                                title: 'Today\'s Profit',
+                                title: 'Lợi nhuận hôm nay',
                                 value: MoneyFormatter.format(
                                   dashboard.profitToday,
                                 ),
                                 icon: Icons.trending_up_rounded,
                                 accent: AppColors.success,
-                                subtitle: 'Lợi nhuận ròng',
+                                subtitle: 'Lợi nhuận ròng trong ngày',
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
                               child: _MetricCard(
-                                title: 'Active Shift',
+                                title: 'Ca làm hiện tại',
                                 value: activeShift == null
-                                    ? 'No shift'
-                                    : 'Live',
+                                    ? 'Không có'
+                                    : 'Đang diễn ra',
                                 icon: Icons.work_history_rounded,
                                 accent: AppColors.warning,
                                 subtitle: activeWork == null
@@ -202,14 +205,14 @@ class _DashboardViewState extends State<DashboardView>
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const _SectionTitle(
-                      title: 'Active Shift',
-                      subtitle: 'Ca làm gần nhất và trạng thái hiện tại',
+                      title: 'Ca làm hiện tại',
+                      subtitle: 'Ca phù hợp với thời điểm hiện tại',
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _ActiveShiftCard(shift: activeShift, work: activeWork),
                     const SizedBox(height: AppSpacing.lg),
                     const _SectionTitle(
-                      title: 'Quick Actions',
+                      title: 'Hành động nhanh',
                       subtitle:
                           'Tạo ca, thêm công việc và mở các màn hình chính',
                     ),
@@ -234,7 +237,7 @@ class _DashboardViewState extends State<DashboardView>
                               width: itemWidth,
                               child: _ActionCard(
                                 icon: Icons.add_circle_outline_rounded,
-                                title: '+ New Shift',
+                                title: '+ Ca mới',
                                 color: AppColors.primary,
                                 onTap: () async {
                                   await context
@@ -248,7 +251,7 @@ class _DashboardViewState extends State<DashboardView>
                               width: itemWidth,
                               child: _ActionCard(
                                 icon: Icons.work_outline_rounded,
-                                title: '+ New Work',
+                                title: '+ Công việc mới',
                                 color: AppColors.secondary,
                                 onTap: () => _openPage(const WorkFormPage()),
                               ),
@@ -256,17 +259,8 @@ class _DashboardViewState extends State<DashboardView>
                             SizedBox(
                               width: itemWidth,
                               child: _ActionCard(
-                                icon: Icons.bar_chart_rounded,
-                                title: 'Analytics',
-                                color: AppColors.success,
-                                onTap: () => _openPage(const AnalyticsPage()),
-                              ),
-                            ),
-                            SizedBox(
-                              width: itemWidth,
-                              child: _ActionCard(
                                 icon: Icons.timeline_rounded,
-                                title: 'Timeline',
+                                title: 'Dòng thời gian',
                                 color: AppColors.warning,
                                 onTap: () => _openPage(const TimelinePage()),
                               ),
@@ -275,7 +269,7 @@ class _DashboardViewState extends State<DashboardView>
                               width: itemWidth,
                               child: _ActionCard(
                                 icon: Icons.settings_outlined,
-                                title: 'Settings',
+                                title: 'Cài đặt',
                                 color: AppColors.danger,
                                 onTap: () => _openPage(const SettingsPage()),
                               ),
@@ -286,9 +280,8 @@ class _DashboardViewState extends State<DashboardView>
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const _SectionTitle(
-                      title: 'Mini Charts',
-                      subtitle:
-                          "Today's income and the last 7 days at a glance",
+                      title: 'Biểu đồ nhanh',
+                      subtitle: 'Doanh thu hôm nay và 7 ngày gần đây',
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     LayoutBuilder(
@@ -300,8 +293,8 @@ class _DashboardViewState extends State<DashboardView>
                                 ? (constraints.maxWidth - AppSpacing.sm) / 2
                                 : constraints.maxWidth,
                             child: _MiniChartCard(
-                              title: 'Today\'s income',
-                              subtitle: 'Orders created today',
+                              title: 'Doanh thu hôm nay',
+                              subtitle: 'Đơn hàng tạo trong hôm nay',
                               color: AppColors.primary,
                               points: _chartPointsFromIncome(todayIncomeItems),
                             ),
@@ -311,8 +304,8 @@ class _DashboardViewState extends State<DashboardView>
                                 ? (constraints.maxWidth - AppSpacing.sm) / 2
                                 : constraints.maxWidth,
                             child: _MiniChartCard(
-                              title: '7-day income',
-                              subtitle: 'Daily totals over the last 7 days',
+                              title: 'Doanh thu 7 ngày',
+                              subtitle: 'Tổng theo ngày trong 7 ngày gần nhất',
                               color: AppColors.secondary,
                               points: _chartPointsFromDailyIncome(
                                 analyticsProvider.incomeItems,
@@ -342,11 +335,12 @@ class _DashboardViewState extends State<DashboardView>
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     _RecentSection(
-                      title: 'Recent Orders',
-                      subtitle: 'Latest income entries from the database',
+                      title: 'Đơn hàng gần đây',
+                      subtitle: 'Khoản thu mới nhất từ cơ sở dữ liệu',
                       emptyIcon: Icons.receipt_long_outlined,
-                      emptyTitle: 'No recent orders',
-                      emptySubtitle: 'Add a shift to start tracking orders.',
+                      emptyTitle: 'Chưa có đơn hàng',
+                      emptySubtitle:
+                          'Thêm ca làm để bắt đầu theo dõi doanh thu.',
                       items: recentOrders
                           .map(
                             (income) => _RecentEntryTile(
@@ -367,11 +361,11 @@ class _DashboardViewState extends State<DashboardView>
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     _RecentSection(
-                      title: 'Recent Expenses',
-                      subtitle: 'Most recent expense records',
+                      title: 'Chi phí gần đây',
+                      subtitle: 'Mục chi gần đây nhất',
                       emptyIcon: Icons.payments_outlined,
-                      emptyTitle: 'No recent expenses',
-                      emptySubtitle: 'Expense records will appear here.',
+                      emptyTitle: 'Chưa có chi phí',
+                      emptySubtitle: 'Các khoản chi sẽ xuất hiện ở đây.',
                       items: recentExpenses
                           .map(
                             (expense) => _RecentEntryTile(
@@ -402,7 +396,7 @@ class _DashboardViewState extends State<DashboardView>
           await _openPage(const ShiftFormPage());
         },
         icon: const Icon(Icons.add),
-        label: const Text('New Shift'),
+        label: const Text('Ca mới'),
       ),
     );
   }
@@ -546,18 +540,18 @@ class _DashboardHeader extends StatelessWidget {
                         runSpacing: 12,
                         children: [
                           _HeaderBadge(
-                            label: 'Revenue',
+                            label: 'Doanh thu',
                             value: MoneyFormatter.format(incomeToday),
                           ),
-                          _HeaderBadge(label: 'Orders', value: '$orderCount'),
+                          _HeaderBadge(label: 'Đơn', value: '$orderCount'),
                           _HeaderBadge(
-                            label: 'Profit',
+                            label: 'Lợi nhuận',
                             value: MoneyFormatter.format(profitToday),
                           ),
                           _HeaderBadge(
-                            label: 'Active',
+                            label: 'Ca',
                             value: activeWorkName == null
-                                ? 'No shift'
+                                ? 'Không có ca'
                                 : '$activeWorkName · ${activeShift?.startTime ?? ''} - ${activeShift?.endTime ?? ''}',
                           ),
                         ],
@@ -760,6 +754,11 @@ class _ActiveShiftCard extends StatelessWidget {
       );
     }
 
+    final now = DateTime.now();
+    final progress = _shiftProgress(currentShift, now);
+    final statusText = _shiftStatusText(currentShift, now);
+    final remainingText = _shiftRemainingText(currentShift, now);
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,7 +783,7 @@ class _ActiveShiftCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      work?.name ?? 'Active Shift',
+                      work?.name ?? 'Ca làm hiện tại',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -792,30 +791,9 @@ class _ActiveShiftCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${currentShift.workDate.day}/${currentShift.workDate.month}/${currentShift.workDate.year}',
+                      '${currentShift.workDate.day}/${currentShift.workDate.month}/${currentShift.workDate.year} • ${currentShift.startTime}${currentShift.endTime.isEmpty ? '' : ' - ${currentShift.endTime}'}',
                       style: const TextStyle(color: AppColors.textSecondary),
                     ),
-                    if (work != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          work!.salaryTypeName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -825,16 +803,41 @@ class _ActiveShiftCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.12),
+                  color: AppColors.primary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
-                  'Live',
-                  style: TextStyle(
-                    color: AppColors.success,
+                child: Text(
+                  statusText,
+                  style: const TextStyle(
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: AppColors.background,
+              color: progress >= 1.0 ? AppColors.success : AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${(progress * 100).round()}% hoàn thành',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                remainingText,
+                style: TextStyle(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -843,35 +846,15 @@ class _ActiveShiftCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _ShiftStatTile(
-                  label: 'Time',
-                  value: '${currentShift.startTime} - ${currentShift.endTime}',
-                  icon: Icons.schedule_rounded,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _ShiftStatTile(
-                  label: 'Revenue',
+                  label: 'Doanh thu',
                   value: MoneyFormatter.format(currentShift.income),
                   icon: Icons.payments_rounded,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _ShiftStatTile(
-                  label: 'Expense',
-                  value: MoneyFormatter.format(currentShift.expense),
-                  icon: Icons.remove_circle_outline_rounded,
-                ),
-              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _ShiftStatTile(
-                  label: 'Profit',
+                  label: 'Lợi nhuận',
                   value: MoneyFormatter.format(currentShift.profit),
                   icon: Icons.trending_up_rounded,
                 ),
@@ -889,6 +872,62 @@ class _ActiveShiftCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _shiftStatusText(Shift shift, DateTime now) {
+  final start = shift.startDateTime;
+  final end = shift.endDateTime;
+
+  if (start == null) return 'Chờ bắt đầu';
+  if (end == null) {
+    return now.isBefore(start) ? 'Sắp bắt đầu' : 'Đang diễn ra';
+  }
+  if (now.isBefore(start)) return 'Sắp bắt đầu';
+  if (now.isAfter(end)) return 'Hoàn tất';
+  return 'Đang diễn ra';
+}
+
+String _shiftRemainingText(Shift shift, DateTime now) {
+  final start = shift.startDateTime;
+  final end = shift.endDateTime;
+
+  if (start == null) return 'Chưa có giờ bắt đầu';
+  if (end == null) {
+    if (now.isBefore(start)) {
+      final delay = start.difference(now);
+      return 'Còn ${delay.inMinutes} phút nữa';
+    }
+    return 'Chưa có giờ kết thúc';
+  }
+  if (now.isBefore(start)) {
+    final delay = start.difference(now);
+    return 'Còn ${delay.inMinutes} phút nữa';
+  }
+  if (now.isAfter(end)) return 'Hoàn tất';
+
+  final remaining = end.difference(now);
+  if (remaining.inHours > 0) {
+    return 'Còn ${remaining.inHours}h ${remaining.inMinutes % 60}m';
+  }
+  return 'Còn ${remaining.inMinutes} phút';
+}
+
+double _shiftProgress(Shift shift, DateTime now) {
+  final start = shift.startDateTime;
+  final end = shift.endDateTime;
+
+  if (start == null) return 0;
+  if (end == null) {
+    return now.isBefore(start) ? 0 : 0.5;
+  }
+
+  if (now.isBefore(start)) return 0;
+  if (now.isAfter(end)) return 1;
+
+  final total = end.difference(start).inSeconds;
+  if (total <= 0) return 1;
+  final elapsed = now.difference(start).inSeconds;
+  return (elapsed / total).clamp(0.0, 1.0).toDouble();
 }
 
 class _ShiftStatTile extends StatelessWidget {
@@ -1042,7 +1081,7 @@ class _MiniChartCard extends StatelessWidget {
             child: points.isEmpty
                 ? const Center(
                     child: Text(
-                      'No chart data yet',
+                      'Chưa có dữ liệu biểu đồ',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                   )
@@ -1275,7 +1314,7 @@ class _ChartPoint {
   const _ChartPoint({required this.label, required this.value});
 }
 
-Shift? _activeShift(Shift? shift, DateTime today) {
+Shift? _activeShift(Shift? shift, DateTime today, DateTime now) {
   if (shift == null) return null;
   final normalizedShift = DateTime(
     shift.workDate.year,

@@ -33,59 +33,12 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
   bool _hasLoaded = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    if (_hasLoaded) return;
-    _hasLoaded = true;
-
-    Future.microtask(() {
-      if (!mounted) return;
-      final shift = widget.shift;
-      if (shift != null) {
-        context.read<IncomeProvider>().loadByShift(shift.id);
-        context.read<ExpenseProvider>().loadByShift(shift.id);
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final shift = widget.shift;
     final work = widget.work;
+    final shift = widget.shift;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(work?.name ?? 'Chi tiết ca làm'),
-        actions: [
-          if (shift != null) ...[
-            Builder(
-              builder: (context) {
-                return IconButton(
-                  tooltip: 'Chỉnh sửa ca làm',
-                  onPressed: () async {
-                    final shiftProvider = context.read<ShiftProvider>();
-                    final incomeProvider = context.read<IncomeProvider>();
-                    final expenseProvider = context.read<ExpenseProvider>();
-
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ShiftFormPage(work: work, shift: shift),
-                      ),
-                    );
-                    if (!mounted) return;
-                    await shiftProvider.load();
-                    await incomeProvider.loadByShift(shift.id);
-                    await expenseProvider.loadByShift(shift.id);
-                  },
-                  icon: const Icon(Icons.edit_outlined),
-                );
-              },
-            ),
-          ],
-        ],
-      ),
+      appBar: AppBar(title: const Text('Chi tiết ca làm')),
       body: shift == null
           ? const Center(child: Text('Không có dữ liệu ca làm'))
           : ListView(
@@ -100,12 +53,13 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                 _buildExpenseSection(),
               ],
             ),
+      floatingActionButton: null,
     );
   }
 
   Widget _buildSummarySection(Shift shift, Work? work) {
     return _SectionCard(
-      title: 'Summary',
+      title: 'Tóm tắt',
       child: Consumer2<IncomeProvider, ExpenseProvider>(
         builder: (context, incomeProvider, expenseProvider, _) {
           final summary = context.read<ShiftProvider>().buildSummary(
@@ -127,56 +81,63 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
             incomes: incomeProvider.incomes,
             expenses: expenseProvider.expenses,
           );
+
           final profitColor = summary.profit >= 0
               ? AppColors.success
               : AppColors.danger;
+
+          final tiles = <Widget>[
+            _SummaryMetricTile(
+              label: 'Số đơn',
+              value: summary.incomeCount.toString(),
+              color: AppColors.primary,
+              icon: Icons.receipt_long_rounded,
+            ),
+            _SummaryMetricTile(
+              label: 'Tổng thu',
+              value: MoneyFormatter.format(summary.totalIncome),
+              color: AppColors.primary,
+              icon: Icons.arrow_upward_rounded,
+            ),
+            _SummaryMetricTile(
+              label: 'Tip',
+              value: MoneyFormatter.format(summary.totalTip),
+              color: AppColors.success,
+              icon: Icons.tips_and_updates_outlined,
+            ),
+            _SummaryMetricTile(
+              label: 'Tổng chi',
+              value: MoneyFormatter.format(summary.totalExpense),
+              color: AppColors.danger,
+              icon: Icons.arrow_downward_rounded,
+            ),
+            _SummaryMetricTile(
+              label: 'Lợi nhuận',
+              value: MoneyFormatter.format(summary.profit),
+              color: profitColor,
+              icon: summary.profit >= 0
+                  ? Icons.trending_up_rounded
+                  : Icons.trending_down_rounded,
+              valuePrefix: summary.profit >= 0 ? '+' : '',
+            ),
+          ];
 
           return AnimatedSize(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
             alignment: Alignment.topCenter,
-            child: GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.9,
-              children: [
-                _SummaryMetricTile(
-                  label: 'Total Orders',
-                  value: summary.incomeCount.toString(),
-                  color: AppColors.primary,
-                  icon: Icons.receipt_long_rounded,
-                ),
-                _SummaryMetricTile(
-                  label: 'Total Income',
-                  value: MoneyFormatter.format(summary.totalIncome),
-                  color: AppColors.primary,
-                  icon: Icons.arrow_upward_rounded,
-                ),
-                _SummaryMetricTile(
-                  label: 'Total Tips',
-                  value: MoneyFormatter.format(summary.totalTip),
-                  color: AppColors.success,
-                  icon: Icons.tips_and_updates_outlined,
-                ),
-                _SummaryMetricTile(
-                  label: 'Total Expense',
-                  value: MoneyFormatter.format(summary.totalExpense),
-                  color: AppColors.danger,
-                  icon: Icons.arrow_downward_rounded,
-                ),
-                _SummaryMetricTile(
-                  label: 'Net Profit',
-                  value: MoneyFormatter.format(summary.profit),
-                  color: profitColor,
-                  icon: summary.profit >= 0
-                      ? Icons.trending_up_rounded
-                      : Icons.trending_down_rounded,
-                  valuePrefix: summary.profit >= 0 ? '+' : '',
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final spacing = 12.0;
+                final tileWidth = (constraints.maxWidth - spacing) / 2;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: tiles
+                      .map((w) => SizedBox(width: tileWidth, child: w))
+                      .toList(),
+                );
+              },
             ),
           );
         },
@@ -186,7 +147,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
 
   Widget _buildShiftInformationSection(Shift shift, Work? work) {
     return _SectionCard(
-      title: 'Shift Information',
+      title: 'Thông tin ca làm',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -232,7 +193,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
 
   Widget _buildIncomeSection() {
     return _SectionCard(
-      title: 'Income',
+      title: 'Thu nhập',
       child: Consumer<IncomeProvider>(
         builder: (context, provider, _) {
           final incomes = provider.incomes;
@@ -256,7 +217,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
             children: [
               if (salaryIncomes.isNotEmpty) ...[
                 const Text(
-                  'Salary',
+                  'Lương tự động',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 10),
@@ -278,7 +239,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                           color: AppColors.primary,
                         ),
                         title: Text(income.title),
-                        subtitle: const Text('Auto-generated salary'),
+                        subtitle: const Text('Tạo tự động từ lương ca làm'),
                         trailing: Text(
                           MoneyFormatter.format(income.amount),
                           style: const TextStyle(fontWeight: FontWeight.w700),
@@ -290,7 +251,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                 const SizedBox(height: 6),
               ],
               const Text(
-                'Manual Income',
+                'Thu nhập khác',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
@@ -309,7 +270,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                         heroTag: 'add-income-${widget.shift?.id ?? 'none'}',
                         onPressed: () => _showIncomeFormSheet(context),
                         icon: const Icon(Icons.add),
-                        label: const Text('Add Income'),
+                        label: const Text('Thêm thu nhập'),
                       ),
                     ),
                   ],
@@ -368,7 +329,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                         heroTag: 'add-income-${widget.shift?.id ?? 'none'}',
                         onPressed: () => _showIncomeFormSheet(context),
                         icon: const Icon(Icons.add),
-                        label: const Text('Add Income'),
+                        label: const Text('Thêm thu nhập'),
                       ),
                     ),
                   ],
@@ -382,7 +343,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
 
   Widget _buildExpenseSection() {
     return _SectionCard(
-      title: 'Expense',
+      title: 'Chi phí',
       child: Consumer<ExpenseProvider>(
         builder: (context, provider, _) {
           final expenses = provider.expenses;
@@ -411,7 +372,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                                 'add-expense-${widget.shift?.id ?? 'none'}',
                             onPressed: () => _showExpenseFormSheet(context),
                             icon: const Icon(Icons.add),
-                            label: const Text('Add Expense'),
+                            label: const Text('Thêm chi phí'),
                           ),
                         ),
                       ],
@@ -473,7 +434,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                                 'add-expense-${widget.shift?.id ?? 'none'}',
                             onPressed: () => _showExpenseFormSheet(context),
                             icon: const Icon(Icons.add),
-                            label: const Text('Add Expense'),
+                            label: const Text('Thêm chi phí'),
                           ),
                         ),
                       ],
@@ -520,7 +481,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isEdit ? 'Edit Income' : 'Add Income',
+                  isEdit ? 'Sửa thu nhập' : 'Thêm thu nhập',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -530,7 +491,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                 TextField(
                   controller: titleController,
                   decoration: const InputDecoration(
-                    labelText: 'Title',
+                    labelText: 'Tên',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -544,7 +505,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                   ],
                   decoration: const InputDecoration(
-                    labelText: 'Amount',
+                    labelText: 'Số tiền',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -567,7 +528,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                   controller: noteController,
                   maxLines: 3,
                   decoration: const InputDecoration(
-                    labelText: 'Note',
+                    labelText: 'Ghi chú',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -577,7 +538,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(sheetContext, false),
-                        child: const Text('Cancel'),
+                        child: const Text('Huỷ'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -614,7 +575,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
 
                           Navigator.pop(sheetContext, true);
                         },
-                        child: const Text('Save'),
+                        child: const Text('Lưu'),
                       ),
                     ),
                   ],
@@ -707,7 +668,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isEdit ? 'Edit Expense' : 'Add Expense',
+                  isEdit ? 'Sửa chi phí' : 'Thêm chi phí',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -717,7 +678,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                 TextField(
                   controller: titleController,
                   decoration: const InputDecoration(
-                    labelText: 'Title',
+                    labelText: 'Tên',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -731,7 +692,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                   ],
                   decoration: const InputDecoration(
-                    labelText: 'Amount',
+                    labelText: 'Số tiền',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -740,7 +701,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                   controller: noteController,
                   maxLines: 3,
                   decoration: const InputDecoration(
-                    labelText: 'Note',
+                    labelText: 'Ghi chú',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -750,7 +711,7 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(sheetContext, false),
-                        child: const Text('Cancel'),
+                        child: const Text('Huỷ'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -845,8 +806,8 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Delete income?'),
-          content: Text('Delete "${income.title}"?'),
+          title: const Text('Xoá khoản thu?'),
+          content: Text('Xoá "${income.title}"?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -886,8 +847,8 @@ class _ShiftDetailPageState extends State<ShiftDetailPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Delete expense?'),
-          content: Text('Delete "${expense.title}"?'),
+          title: const Text('Xoá chi phí?'),
+          content: Text('Xoá "${expense.title}"?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -951,23 +912,17 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
+          const Spacer(),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
           ),
         ],
       ),

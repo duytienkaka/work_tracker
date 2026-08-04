@@ -26,10 +26,19 @@ class WorkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final handleTap =
+        onTap ??
+        () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => WorkDetailPage(summary: summary)),
+          );
+        };
+
     return AppCard(
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
+        onTap: handleTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -62,23 +71,33 @@ class WorkCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: const Text(
-                    'Đang hoạt động',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                PopupMenuButton<String>(
+                  tooltip: 'More actions',
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      onEdit?.call();
+                    } else if (value == 'delete') {
+                      onDelete?.call();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('Chỉnh sửa'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                  ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline_rounded),
+                        title: Text('Xoá'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -141,34 +160,6 @@ class WorkCard extends StatelessWidget {
                   ],
                 );
               },
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: const Text('Sửa'),
-                ),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => WorkDetailPage(summary: summary),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.bar_chart, size: 18),
-                  label: const Text('Chi tiết'),
-                ),
-                const Spacer(),
-                if (onDelete != null)
-                  IconButton(
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                  ),
-              ],
             ),
           ],
         ),

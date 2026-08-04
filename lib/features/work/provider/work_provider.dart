@@ -66,6 +66,10 @@ class WorkProvider extends ChangeNotifier {
     await loadWorks();
   }
 
+  Future<Map<String, int>> getDeleteSummary(String id) async {
+    return repository.getDeleteSummary(id);
+  }
+
   Future<void> loadWorkDetail(String workId) async {
     currentWorkDetailId = workId;
     currentWorkShifts = await repository.getShiftsByWork(workId);

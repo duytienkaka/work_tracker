@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../analytics/screen/analytics_page.dart';
 import '../dashboard/screen/dashboard_page.dart';
 import '../settings/screen/settings_page.dart';
 import '../shift/screen/shift_list_page.dart';
@@ -20,7 +19,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     const DashboardPage(),
     const WorkListPage(),
     const ShiftListPage(),
-    const AnalyticsPage(),
     const SettingsPage(),
   ];
 
@@ -39,27 +37,22 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Trang chủ',
           ),
           NavigationDestination(
             icon: Icon(Icons.work_outline),
             selectedIcon: Icon(Icons.work),
-            label: 'Work',
+            label: 'Công việc',
           ),
           NavigationDestination(
             icon: Icon(Icons.schedule_outlined),
             selectedIcon: Icon(Icons.schedule),
-            label: 'Shift',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Analytics',
+            label: 'Ca làm',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            label: 'Cài đặt',
           ),
         ],
       ),

@@ -45,29 +45,25 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         final profit = totalIncome - totalExpense;
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(summary.work.name),
-            actions: [
-              IconButton(
-                tooltip: 'Thêm ca làm',
-                onPressed: () async {
-                  final workProvider = context.read<WorkProvider>();
-                  final currentContext = context;
+          appBar: AppBar(title: Text(summary.work.name)),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () async {
+              final workProvider = context.read<WorkProvider>();
+              final currentContext = context;
 
-                  await Navigator.push(
-                    currentContext,
-                    MaterialPageRoute(
-                      builder: (_) => ShiftFormPage(work: summary.work),
-                    ),
-                  );
+              await Navigator.push(
+                currentContext,
+                MaterialPageRoute(
+                  builder: (_) => ShiftFormPage(work: summary.work),
+                ),
+              );
 
-                  if (!currentContext.mounted) return;
-                  if (!mounted) return;
-                  await workProvider.loadWorkDetail(summary.work.id);
-                },
-                icon: const Icon(Icons.add_circle_outline),
-              ),
-            ],
+              if (!currentContext.mounted) return;
+              if (!mounted) return;
+              await workProvider.loadWorkDetail(summary.work.id);
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Thêm ca làm'),
           ),
           body: ListView(
             padding: const EdgeInsets.all(16),
@@ -107,7 +103,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Timeline',
+                'Dòng thời gian',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),

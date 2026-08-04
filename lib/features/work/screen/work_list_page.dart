@@ -6,10 +6,10 @@ import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_spacing.dart';
 import '../../analytics/provider/analytics_provider.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
-import '../../shift/screen/shift_form_page.dart';
 import '../../timeline/provider/timeline_provider.dart';
 import '../widgets/work_card.dart';
 import '../provider/work_provider.dart';
+import 'work_detail_page.dart';
 import 'work_form_page.dart';
 
 class WorkListPage extends StatefulWidget {
@@ -89,28 +89,13 @@ class _WorkListPageState extends State<WorkListPage> {
                         return WorkCard(
                           summary: summary,
                           onTap: () async {
-                            final dashboardProvider = context
-                                .read<DashboardProvider>();
-                            final analyticsProvider = context
-                                .read<AnalyticsProvider>();
-                            final timelineProvider = context
-                                .read<TimelineProvider>();
-                            final currentContext = context;
-
                             await Navigator.push(
-                              currentContext,
+                              context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    ShiftFormPage(work: summary.work),
+                                    WorkDetailPage(summary: summary),
                               ),
                             );
-
-                            if (!currentContext.mounted) return;
-                            if (!mounted) return;
-                            await provider.loadWorks();
-                            await dashboardProvider.load();
-                            await analyticsProvider.load();
-                            await timelineProvider.loadTimeline();
                           },
                           onEdit: () {
                             Navigator.push(
@@ -122,7 +107,10 @@ class _WorkListPageState extends State<WorkListPage> {
                             );
                           },
                           onDelete: () async {
+                            if (!mounted) return;
                             final currentContext = context;
+                            if (!currentContext.mounted) return;
+
                             final dashboardProvider = currentContext
                                 .read<DashboardProvider>();
                             final analyticsProvider = currentContext
@@ -130,13 +118,56 @@ class _WorkListPageState extends State<WorkListPage> {
                             final timelineProvider = currentContext
                                 .read<TimelineProvider>();
 
+                            final deleteSummary = await provider
+                                .getDeleteSummary(summary.work.id);
+
+                            if (!mounted || !currentContext.mounted) {
+                              return;
+                            }
+
                             final shouldDelete = await showDialog<bool>(
                               context: currentContext,
                               builder: (dialogContext) {
+                                final dialogSummary = deleteSummary;
                                 return AlertDialog(
-                                  title: const Text('Xác nhận xoá công việc'),
-                                  content: const Text(
-                                    'Xoá công việc sẽ đồng thời xoá toàn bộ ca làm và dữ liệu liên quan. Bạn có muốn tiếp tục?',
+                                  title: const Text('Xoá công việc vĩnh viễn?'),
+                                  content: SizedBox(
+                                    width: double.maxFinite,
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Hành động này sẽ xoá ${summary.work.name} cùng toàn bộ ca làm, khoản thu và chi liên quan.',
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _DeleteSummaryRow(
+                                            label: 'Ca làm',
+                                            value:
+                                                '${dialogSummary['shifts'] ?? 0}',
+                                          ),
+                                          _DeleteSummaryRow(
+                                            label: 'Khoản thu',
+                                            value:
+                                                '${dialogSummary['income'] ?? 0}',
+                                          ),
+                                          _DeleteSummaryRow(
+                                            label: 'Chi phí',
+                                            value:
+                                                '${dialogSummary['expense'] ?? 0}',
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            'Không thể hoàn tác sau khi xác nhận.',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                   actions: [
                                     TextButton(
@@ -147,7 +178,7 @@ class _WorkListPageState extends State<WorkListPage> {
                                     FilledButton(
                                       onPressed: () =>
                                           Navigator.pop(dialogContext, true),
-                                      child: const Text('Xoá'),
+                                      child: const Text('Xoá vĩnh viễn'),
                                     ),
                                   ],
                                 );
@@ -195,6 +226,27 @@ class _WorkListPageState extends State<WorkListPage> {
         },
         icon: const Icon(Icons.add),
         label: const Text('Thêm mới'),
+      ),
+    );
+  }
+}
+
+class _DeleteSummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DeleteSummaryRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 8),
+          Text(value),
+        ],
       ),
     );
   }
