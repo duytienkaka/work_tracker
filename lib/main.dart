@@ -9,6 +9,8 @@ import 'features/dashboard/provider/dashboard_provider.dart';
 import 'features/dashboard/repository/dashboard_repository.dart';
 import 'features/expense/provider/expense_provider.dart';
 import 'features/expense/repository/expense_repository.dart';
+import 'features/family/data/family_api_client.dart';
+import 'features/family/provider/family_provider.dart';
 import 'features/income/provider/income_provider.dart';
 import 'features/income/repository/income_repository.dart';
 import 'features/settings/provider/settings_provider.dart';
@@ -48,6 +50,9 @@ class WorkTrackerApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
+        ChangeNotifierProvider(
+          create: (_) => FamilyProvider(FamilyApiClient())..restoreSession(),
+        ),
         Provider(create: (_) => IncomeRepository()),
         ChangeNotifierProvider(
           create: (context) => IncomeProvider(

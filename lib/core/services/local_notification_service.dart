@@ -56,6 +56,17 @@ class LocalNotificationService {
     await _plugin.cancel(id: _notificationId(shiftId));
   }
 
+  Future<void> showFamilyUpdate(String body) async {
+    await _plugin.show(
+      id: 9001,
+      title: 'Family workspace updated',
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails('family_updates', 'Family updates', channelDescription: 'Updates from your family workspace', importance: Importance.defaultImportance),
+      ),
+    );
+  }
+
   int _notificationId(String value) {
     var hash = 0;
     for (final codeUnit in value.codeUnits) {

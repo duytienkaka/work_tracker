@@ -43,3 +43,8 @@
 # Local environment
 .env
 .local.properties
+.secrets/
+WorkTracker.Api/appsettings.Production.json
+WorkTracker.Api/bin/
+WorkTracker.Api/obj/
+WorkTracker.Api/publish/

@@ -6,6 +6,33 @@ The format is inspired by **Keep a Changelog**, and this project follows **Seman
 
 ---
 
+## [2.1.0] - 2026-08-07
+
+### Added
+
+* Optional family account with backend sign-up and sign-in.
+* Family workspace creation and family list.
+* Shared expense creation, validation, editing and deletion.
+* Shared expense dashboard with monthly totals and category summaries.
+* Family member list with Owner and Member roles.
+* Add and remove family members by registered email.
+* Initial shared income, budget and expense-category API support.
+* Family workspace tabs for Overview, Transactions, Members and Shared Work.
+* Work snapshot synchronization and local family update notifications.
+
+### Changed
+
+* Added production API connectivity and SQL Server persistence through the family backend.
+* Improved family forms with inline validation and clearer error messages.
+* Added date-range filtering, session restoration and clearer authentication errors.
+
+### Notes
+
+* Email OTP verification is intentionally deferred to a future release.
+* Family workspace features are optional; existing local work tracking remains available.
+
+---
+
 ## [2.0.0] - 2026-08-07
 
 ### Added

@@ -6,6 +6,7 @@ import '../../../shared/widgets/app_feedback.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
 import '../../analytics/provider/analytics_provider.dart';
 import '../../analytics/screen/analytics_page.dart';
+import '../../family/screen/family_access_page.dart';
 import '../../shift/provider/shift_provider.dart';
 import '../../timeline/provider/timeline_provider.dart';
 import '../../work/provider/work_provider.dart';
@@ -128,6 +129,18 @@ class SettingsPage extends StatelessWidget {
                   context,
                   MaterialPageRoute(builder: (_) => const AnalyticsPage()),
                 ),
+              ),
+            ],
+          ),
+          _SectionLabel('Family'),
+          _SettingsGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.family_restroom_outlined),
+                title: const Text('Family workspace'),
+                subtitle: const Text('Sign in and connect with your family'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyAccessPage())),
               ),
             ],
           ),
