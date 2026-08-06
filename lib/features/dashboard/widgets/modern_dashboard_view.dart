@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/money_formatter.dart';
+import '../../../core/services/widget_update_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../shift/model/shift_model.dart';
@@ -21,10 +24,21 @@ class ModernDashboardView extends StatefulWidget {
 }
 
 class _ModernDashboardViewState extends State<ModernDashboardView> {
+  Timer? _clock;
+
   @override
   void initState() {
     super.initState();
     Future.microtask(_reload);
+    _clock = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
   }
 
   Future<void> _reload() async {
@@ -34,6 +48,14 @@ class _ModernDashboardViewState extends State<ModernDashboardView> {
       context.read<ShiftProvider>().load(),
       context.read<WorkProvider>().loadWorks(),
     ]);
+    final dashboard = context.read<DashboardProvider>().dashboard;
+    final active = dashboard?.recentShift;
+    await WidgetUpdateService.update(
+      title: active == null ? 'Work Tracker' : 'Next shift at ${active.startTime}',
+      subtitle: active == null
+          ? 'No upcoming shift today'
+          : 'Tap to open your workday',
+    );
   }
 
   Future<void> _openPage(Widget page) async {

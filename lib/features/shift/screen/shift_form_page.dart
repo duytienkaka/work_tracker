@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/utils/money_formatter.dart';
+import '../../../core/services/local_notification_service.dart';
 import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../theme/app_colors.dart';
@@ -12,7 +13,9 @@ import '../../timeline/provider/timeline_provider.dart';
 import '../../work/model/work_model.dart';
 import '../../work/provider/work_provider.dart';
 import '../model/shift_model.dart';
+import '../model/shift_template.dart';
 import '../provider/shift_provider.dart';
+import '../service/shift_template_service.dart';
 
 class ShiftFormPage extends StatefulWidget {
   final Work? work;
@@ -25,6 +28,8 @@ class ShiftFormPage extends StatefulWidget {
 }
 
 class _ShiftFormPageState extends State<ShiftFormPage> {
+  final ShiftTemplateService templateService = ShiftTemplateService();
+  List<ShiftTemplate> templates = [];
   DateTime workDate = DateTime.now();
 
   TimeOfDay? startTime;
@@ -72,6 +77,10 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
   void initState() {
     super.initState();
 
+    templateService.load().then((value) {
+      if (mounted) setState(() => templates = value);
+    });
+
     availableWorks = context.read<WorkProvider>().works;
     if (isEdit) {
       final found = availableWorks.where(
@@ -117,6 +126,78 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
     noteController.dispose();
     super.dispose();
   }
+
+  void _applyTemplate(ShiftTemplate template) {
+    final work = availableWorks.where((item) => item.id == template.workId);
+    final start = template.startTime.split(':');
+    final end = template.endTime.split(':');
+    setState(() {
+      if (work.isNotEmpty) selectedWork = work.first;
+      if (start.length == 2) {
+        startTime = TimeOfDay(
+          hour: int.parse(start[0]),
+          minute: int.parse(start[1]),
+        );
+      }
+      if (end.length == 2) {
+        endTime = TimeOfDay(
+          hour: int.parse(end[0]),
+          minute: int.parse(end[1]),
+        );
+      }
+      noteController.text = template.note;
+    });
+  }
+
+  Future<void> _saveTemplate() async {
+    if (selectedWork == null || startTime == null || endTime == null) {
+      AppFeedback.showError(context, 'Choose a work and both shift times first');
+      return;
+    }
+    final nameController = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Save shift template'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Template name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, nameController.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    if (!mounted || name == null || name.isEmpty) return;
+
+    await templateService.save(
+      ShiftTemplate(
+        id: const Uuid().v4(),
+        name: name,
+        workId: selectedWork!.id,
+        startTime: _formatTime(startTime!),
+        endTime: _formatTime(endTime!),
+        note: noteController.text.trim(),
+      ),
+    );
+    if (mounted) {
+      final savedTemplates = await templateService.load();
+      setState(() => templates = savedTemplates);
+      AppFeedback.showSuccess(context, 'Template saved');
+    }
+  }
+
+  String _formatTime(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
 
   Future<void> pickDate() async {
     final result = await showDatePicker(
@@ -166,6 +247,24 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
+          if (!isEdit && templates.isNotEmpty) ...[
+            DropdownButtonFormField<ShiftTemplate>(
+              decoration: const InputDecoration(
+                labelText: 'Use a saved template',
+                prefixIcon: Icon(Icons.bookmarks_outlined),
+              ),
+              items: templates
+                  .map((template) => DropdownMenuItem(
+                        value: template,
+                        child: Text(template.name),
+                      ))
+                  .toList(),
+              onChanged: (template) {
+                if (template != null) _applyTemplate(template);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
           Text(
             isEdit ? 'Update your shift' : 'Plan a work shift',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -309,6 +408,13 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
 
           const SizedBox(height: 30),
 
+          if (!isEdit)
+            OutlinedButton.icon(
+              onPressed: _saveTemplate,
+              icon: const Icon(Icons.bookmark_add_outlined),
+              label: const Text('Save as template'),
+            ),
+          if (!isEdit) const SizedBox(height: 12),
           PrimaryButton(
             text: isEdit ? "Cập nhật" : "Lưu",
             icon: Icons.save,
@@ -448,8 +554,14 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
               try {
                 if (isEdit) {
                   await provider.update(shift);
+                  await LocalNotificationService.instance.scheduleShiftReminder(
+                    shift,
+                  );
                 } else {
                   await provider.add(shift);
+                  await LocalNotificationService.instance.scheduleShiftReminder(
+                    shift,
+                  );
                 }
 
                 if (!mounted || !currentContext.mounted) return;

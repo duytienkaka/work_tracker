@@ -6,6 +6,33 @@ The format is inspired by **Keep a Changelog**, and this project follows **Seman
 
 ---
 
+## [2.0.0] - 2026-08-07
+
+### Added
+
+* Complete Material 3 redesign across Dashboard, Works, Work Detail, Timeline, Shift List, Shift Detail, Forms, Settings and Splash.
+* Today Mode with live shift progress and remaining time.
+* Weekly Calendar view with day selection and daily shift summaries.
+* Local shift notifications scheduled 30 minutes before a shift.
+* Local Shift Templates for quickly reusing work times and notes.
+* Work Insights with trends, work comparisons and profit summaries.
+* Offline JSON backup and restore for Works, Shifts, Income and Expenses.
+* Android home-screen widget showing the next shift state.
+* Android launcher Quick Action for creating a new shift.
+* Dark mode, improved empty/loading/error states and accessible touch targets.
+
+### Changed
+
+* Reworked navigation, typography, spacing, cards, forms, FABs and dialogs into one consistent Android design system.
+* Added database-level protection against overlapping shifts across all works.
+* Improved one-handed workflows and immediate CRUD refresh behavior.
+
+### Notes
+
+* Restore currently uses the latest local backup stored by Work Tracker.
+
+---
+
 ## [1.3.2] - 2026-08-04
 
 ### Fixed

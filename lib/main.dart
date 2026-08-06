@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/router/app_router.dart';
+import 'core/services/local_notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/analytics/provider/analytics_provider.dart';
 import 'features/dashboard/provider/dashboard_provider.dart';
@@ -21,6 +22,7 @@ import 'features/work/repository/work_repository.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  LocalNotificationService.instance.initialize();
   runApp(const WorkTrackerApp());
 }
 

@@ -5,12 +5,14 @@ import '../../../core/database/app_database.dart';
 import '../../../shared/widgets/app_feedback.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
 import '../../analytics/provider/analytics_provider.dart';
+import '../../analytics/screen/analytics_page.dart';
 import '../../shift/provider/shift_provider.dart';
 import '../../timeline/provider/timeline_provider.dart';
 import '../../work/provider/work_provider.dart';
 import '../model/currency_option.dart';
 import '../provider/settings_provider.dart';
 import '../service/export_service.dart';
+import '../service/backup_service.dart';
 import 'privacy_page.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -90,11 +92,42 @@ class SettingsPage extends StatelessWidget {
               ),
               const Divider(height: 1, indent: 72),
               ListTile(
+                leading: const Icon(Icons.backup_outlined),
+                title: const Text('Backup all data'),
+                subtitle: const Text('Save a complete JSON backup on this device'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _backup(context),
+              ),
+              const Divider(height: 1, indent: 72),
+              ListTile(
+                leading: const Icon(Icons.restore_outlined),
+                title: const Text('Restore backup'),
+                subtitle: const Text('Restore the latest local backup'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _restore(context),
+              ),
+              const Divider(height: 1, indent: 72),
+              ListTile(
                 leading: Icon(Icons.delete_sweep_outlined, color: colors.error),
                 title: Text('Reset all data', style: TextStyle(color: colors.error)),
                 subtitle: const Text('Permanently remove everything stored locally'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _reset(context),
+              ),
+            ],
+          ),
+          _SectionLabel('Insights'),
+          _SettingsGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.insights_outlined),
+                title: const Text('Work insights'),
+                subtitle: const Text('See trends, totals, and your strongest work'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AnalyticsPage()),
+                ),
               ),
             ],
           ),
@@ -156,6 +189,42 @@ class SettingsPage extends StatelessWidget {
     }
 
     AppFeedback.showSuccess(context, 'Exported to $path');
+  }
+
+  Future<void> _backup(BuildContext context) async {
+    try {
+      final path = await BackupService().createBackup();
+      if (context.mounted) AppFeedback.showSuccess(context, 'Backup saved to $path');
+    } catch (_) {
+      if (context.mounted) AppFeedback.showError(context, 'Could not create backup');
+    }
+  }
+
+  Future<void> _restore(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Restore this backup?'),
+        content: const Text('Current local data will be replaced by the latest local backup.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Restore')),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      final restored = await BackupService().restoreBackup();
+      if (!restored || !context.mounted) return;
+      await context.read<ShiftProvider>().load();
+      await context.read<WorkProvider>().loadWorks();
+      await context.read<DashboardProvider>().load();
+      await context.read<AnalyticsProvider>().load();
+      await context.read<TimelineProvider>().loadTimeline();
+      if (context.mounted) AppFeedback.showSuccess(context, 'Backup restored successfully');
+    } catch (_) {
+      if (context.mounted) AppFeedback.showError(context, 'Could not restore backup');
+    }
   }
 
   String _themeLabel(AppThemeMode mode) => switch (mode) {
