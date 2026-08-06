@@ -26,11 +26,11 @@ class _SplashPageState extends State<SplashPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 96,
-              height: 96,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(28),
               ),
               child: Icon(
                 Icons.work_history_rounded,
@@ -38,7 +38,7 @@ class _SplashPageState extends State<SplashPage> {
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             Text(
               'Work Tracker',
               style: Theme.of(
@@ -46,7 +46,18 @@ class _SplashPageState extends State<SplashPage> {
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text('Home', style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              'Make every shift count',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 28),
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
           ],
         ),
       ),

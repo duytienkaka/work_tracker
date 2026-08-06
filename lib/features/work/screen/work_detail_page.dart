@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/money_formatter.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/empty_state.dart';
-import '../../../theme/app_colors.dart';
+import '../../../shared/widgets/section_title.dart';
 import '../../shift/screen/shift_detail_page.dart';
 import '../../shift/screen/shift_form_page.dart';
 import '../model/work_summary.dart';
@@ -11,7 +12,6 @@ import '../provider/work_provider.dart';
 
 class WorkDetailPage extends StatefulWidget {
   final WorkSummary summary;
-
   const WorkDetailPage({super.key, required this.summary});
 
   @override
@@ -23,186 +23,94 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      if (!mounted) return;
-      context.read<WorkProvider>().loadWorkDetail(widget.summary.work.id);
+      if (mounted) context.read<WorkProvider>().loadWorkDetail(widget.summary.work.id);
     });
+  }
+
+  Future<void> _newShift() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ShiftFormPage(work: widget.summary.work)),
+    );
+    if (mounted) context.read<WorkProvider>().loadWorkDetail(widget.summary.work.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    final summary = widget.summary;
-
+    final colors = Theme.of(context).colorScheme;
     return Consumer<WorkProvider>(
       builder: (context, provider, _) {
-        final totalIncome = provider.currentWorkShifts.fold<double>(
-          0,
-          (sum, shift) => sum + shift.income,
-        );
-        final totalExpense = provider.currentWorkShifts.fold<double>(
-          0,
-          (sum, shift) => sum + shift.expense,
-        );
-        final profit = totalIncome - totalExpense;
+        final shifts = provider.currentWorkShifts;
+        final income = shifts.fold<double>(0, (sum, shift) => sum + shift.income);
+        final expense = shifts.fold<double>(0, (sum, shift) => sum + shift.expense);
+        final profit = income - expense;
 
         return Scaffold(
-          appBar: AppBar(title: Text(summary.work.name)),
+          appBar: AppBar(title: Text(widget.summary.work.name)),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () async {
-              final workProvider = context.read<WorkProvider>();
-              final currentContext = context;
-
-              await Navigator.push(
-                currentContext,
-                MaterialPageRoute(
-                  builder: (_) => ShiftFormPage(work: summary.work),
-                ),
-              );
-
-              if (!currentContext.mounted) return;
-              if (!mounted) return;
-              await workProvider.loadWorkDetail(summary.work.id);
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Thêm ca làm'),
+            onPressed: _newShift,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('New shift'),
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 112),
             children: [
-              Text(
-                summary.work.name,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              _WorkHero(summary: widget.summary),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: _Stat(value: MoneyFormatter.format(income), label: 'Income')),
+                  Expanded(child: _Stat(value: MoneyFormatter.format(expense), label: 'Expense', color: colors.error)),
+                  Expanded(child: _Stat(value: MoneyFormatter.format(profit), label: 'Profit', color: profit >= 0 ? colors.primary : colors.error)),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                summary.work.description.isEmpty
-                    ? 'Không có mô tả'
-                    : summary.work.description,
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
-              _SummaryBlock(
-                title: 'Tổng thu',
-                value: MoneyFormatter.format(totalIncome),
-                color: AppColors.primary,
-              ),
-              const SizedBox(height: 12),
-              _SummaryBlock(
-                title: 'Tổng chi',
-                value: MoneyFormatter.format(totalExpense),
-                color: AppColors.danger,
-              ),
-              const SizedBox(height: 12),
-              _SummaryBlock(
-                title: 'Lợi nhuận',
-                value: MoneyFormatter.format(profit),
-                color: AppColors.success,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Dòng thời gian',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              if (provider.currentWorkShifts.isEmpty)
+              const SectionTitle(title: 'Shift history'),
+              if (shifts.isEmpty)
                 const EmptyState(
-                  icon: Icons.schedule_outlined,
-                  title: 'Chưa có ca làm',
-                  subtitle: 'Hãy thêm ca làm đầu tiên cho công việc này.',
+                  icon: Icons.event_note_rounded,
+                  title: 'No shifts yet',
+                  subtitle: 'Add your first shift to start building a work history.',
                 )
               else
-                Column(
-                  children: provider.currentWorkShifts.map((shift) {
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      child: InkWell(
-                        onTap: () async {
-                          final workProvider = context.read<WorkProvider>();
-                          final currentContext = context;
-
-                          await Navigator.push(
-                            currentContext,
-                            MaterialPageRoute(
-                              builder: (_) => ShiftDetailPage(
-                                work: summary.work,
-                                shift: shift,
-                              ),
-                            ),
-                          );
-                          if (!currentContext.mounted) return;
-                          if (!mounted) return;
-                          await workProvider.loadWorkDetail(summary.work.id);
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
+                ...shifts.map((shift) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppCard(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ShiftDetailPage(work: widget.summary.work, shift: shift),
+                        ),
+                      );
+                      if (mounted) provider.loadWorkDetail(widget.summary.work.id);
+                    },
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: colors.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.schedule_rounded, color: colors.onPrimaryContainer),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${shift.startTime} → ${shift.endTime}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  const Icon(Icons.schedule, size: 18),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                shift.workDate.toString().substring(0, 10),
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _MiniMetric(
-                                      label: 'Thu',
-                                      value: MoneyFormatter.format(
-                                        shift.income,
-                                      ),
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _MiniMetric(
-                                      label: 'Chi',
-                                      value: MoneyFormatter.format(
-                                        shift.expense,
-                                      ),
-                                      color: AppColors.danger,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _MiniMetric(
-                                      label: 'Lợi nhuận',
-                                      value: MoneyFormatter.format(
-                                        shift.profit,
-                                      ),
-                                      color: AppColors.success,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              Text('${shift.startTime} - ${shift.endTime}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 4),
+                              Text(_dateLabel(shift.workDate), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
                             ],
                           ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                        Text(MoneyFormatter.format(shift.profit), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: shift.profit >= 0 ? colors.primary : colors.error, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                )),
             ],
           ),
         );
@@ -211,69 +119,54 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
   }
 }
 
-class _MiniMetric extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _MiniMetric({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+class _WorkHero extends StatelessWidget {
+  final WorkSummary summary;
+  const _WorkHero({required this.summary});
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(color: color, fontSize: 11)),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryBlock extends StatelessWidget {
-  final String title;
-  final String value;
-  final Color color;
-
-  const _SummaryBlock({
-    required this.title,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: colors.primaryContainer,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          Icon(Icons.work_history_rounded, size: 42, color: colors.onPrimaryContainer),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(summary.work.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: colors.onPrimaryContainer, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(summary.work.salaryTypeName, style: TextStyle(color: colors.onPrimaryContainer.withValues(alpha: 0.78))),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+class _Stat extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color? color;
+  const _Stat({required this.value, required this.label, this.color});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 4),
+      Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+    ],
+  );
+}
+
+String _dateLabel(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';

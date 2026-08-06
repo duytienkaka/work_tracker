@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../dashboard/screen/dashboard_page.dart';
 import '../settings/screen/settings_page.dart';
-import '../shift/screen/shift_list_page.dart';
+import '../timeline/screen/timeline_page.dart';
 import '../work/screen/work_list_page.dart';
 
 class MainNavigationPage extends StatefulWidget {
@@ -18,7 +18,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   late final pages = <Widget>[
     const DashboardPage(),
     const WorkListPage(),
-    const ShiftListPage(),
+    const TimelinePage(),
     const SettingsPage(),
   ];
 
@@ -35,24 +35,24 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Trang chủ',
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard_rounded),
+            label: 'Dashboard',
           ),
           NavigationDestination(
             icon: Icon(Icons.work_outline),
             selectedIcon: Icon(Icons.work),
-            label: 'Công việc',
+            label: 'Works',
           ),
           NavigationDestination(
-            icon: Icon(Icons.schedule_outlined),
-            selectedIcon: Icon(Icons.schedule),
-            label: 'Ca làm',
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Timeline',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: 'Cài đặt',
+            label: 'Settings',
           ),
         ],
       ),

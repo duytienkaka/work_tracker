@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/database/app_database.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_feedback.dart';
-import '../../../shared/widgets/section_title.dart';
-import '../../analytics/provider/analytics_provider.dart';
 import '../../dashboard/provider/dashboard_provider.dart';
+import '../../analytics/provider/analytics_provider.dart';
 import '../../shift/provider/shift_provider.dart';
 import '../../timeline/provider/timeline_provider.dart';
 import '../../work/provider/work_provider.dart';
@@ -18,232 +16,223 @@ import 'privacy_page.dart';
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
+  Future<void> _reset(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset all data?'),
+        content: const Text('This removes all works, shifts, income, and expenses.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await AppDatabase.resetDatabase();
+      await context.read<ShiftProvider>().load();
+      await context.read<WorkProvider>().loadWorks();
+      await context.read<DashboardProvider>().load();
+      await context.read<AnalyticsProvider>().load();
+      await context.read<TimelineProvider>().loadTimeline();
+      if (context.mounted) AppFeedback.showSuccess(context, 'Data reset successfully');
+    } catch (_) {
+      if (context.mounted) AppFeedback.showError(context, 'Could not reset data');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SettingsProvider>();
-    final themeMode = provider.themeMode;
-    final currency = provider.currency;
-
+    final settings = context.watch<SettingsProvider>();
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          const SectionTitle(title: 'Theme'),
-          AppCard(
-            padding: const EdgeInsets.all(16),
-            child: SegmentedButton<AppThemeMode>(
-              segments: const [
-                ButtonSegment(
-                  value: AppThemeMode.system,
-                  label: Text('System'),
-                ),
-                ButtonSegment(value: AppThemeMode.light, label: Text('Light')),
-                ButtonSegment(value: AppThemeMode.dark, label: Text('Dark')),
-              ],
-              selected: {themeMode},
-              onSelectionChanged: (selection) {
-                if (selection.isNotEmpty) {
-                  provider.updateThemeMode(selection.first);
-                }
-              },
-            ),
+          _SectionLabel('Appearance'),
+          _SettingsGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.brightness_6_outlined),
+                title: const Text('Theme'),
+                subtitle: Text(_themeLabel(settings.themeMode)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _themePicker(context, settings),
+              ),
+              const Divider(height: 1, indent: 72),
+              ListTile(
+                leading: const Icon(Icons.payments_outlined),
+                title: const Text('Currency'),
+                subtitle: Text(settings.currency.label),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _currencyPicker(context, settings),
+              ),
+            ],
           ),
-          const SectionTitle(title: 'Currency'),
-          AppCard(
-            padding: const EdgeInsets.all(16),
-            child: SegmentedButton<CurrencyOption>(
-              segments: CurrencyOption.values
-                  .map(
-                    (option) =>
-                        ButtonSegment(value: option, label: Text(option.label)),
-                  )
-                  .toList(),
-              selected: {currency},
-              onSelectionChanged: (selection) {
-                if (selection.isNotEmpty) {
-                  provider.updateCurrency(selection.first);
-                }
-              },
-            ),
+          _SectionLabel('Your data'),
+          _SettingsGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.file_upload_outlined),
+                title: const Text('Export data'),
+                subtitle: const Text('Create a local backup of your records'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _export(context),
+              ),
+              const Divider(height: 1, indent: 72),
+              ListTile(
+                leading: Icon(Icons.delete_sweep_outlined, color: colors.error),
+                title: Text('Reset all data', style: TextStyle(color: colors.error)),
+                subtitle: const Text('Permanently remove everything stored locally'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _reset(context),
+              ),
+            ],
           ),
-          const SectionTitle(title: 'Data'),
-          AppCard(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.file_download_outlined),
-                  title: const Text('Export Shift to CSV'),
-                  subtitle: const Text('Lưu file vào thư mục Download'),
-                  onTap: () async {
-                    final shiftProvider = context.read<ShiftProvider>();
-                    final service = ExportService();
-                    final path = await service.exportShiftsToCsv(
-                      shiftProvider.shifts,
-                    );
-
-                    if (!context.mounted) return;
-
-                    if (path == null) {
-                      if (shiftProvider.shifts.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Chưa có dữ liệu để xuất.'),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Không thể xuất dữ liệu.'),
-                          ),
-                        );
-                      }
-                      return;
-                    }
-
-                    if (!context.mounted) return;
-
-                    await showDialog<void>(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: const Text('Export thành công'),
-                          content: Text('File đã lưu tại: $path'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Đóng'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
+          _SectionLabel('About'),
+          _SettingsGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.info_outline_rounded),
+                title: const Text('About Work Tracker'),
+                subtitle: const Text('Version 1.0.0'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => showAboutDialog(
+                  context: context,
+                  applicationName: 'Work Tracker',
+                  applicationVersion: '1.0.0',
+                  applicationLegalese: 'Personal work management',
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(
-                    Icons.delete_forever,
-                    color: Colors.redAccent,
-                  ),
-                  title: const Text('Reset data'),
-                  subtitle: const Text(
-                    'Xoá toàn bộ công việc, ca làm và giao dịch đã lưu.',
-                  ),
-                  onTap: () async {
-                    final currentContext = context;
-                    final shiftProvider = currentContext.read<ShiftProvider>();
-                    final workProvider = currentContext.read<WorkProvider>();
-                    final dashboardProvider = currentContext
-                        .read<DashboardProvider>();
-                    final analyticsProvider = currentContext
-                        .read<AnalyticsProvider>();
-                    final timelineProvider = currentContext
-                        .read<TimelineProvider>();
-
-                    final confirmed = await showDialog<bool>(
-                      context: currentContext,
-                      builder: (dialogContext) {
-                        return AlertDialog(
-                          title: const Text('Xác nhận đặt lại dữ liệu'),
-                          content: const Text(
-                            'Bạn có chắc muốn xoá toàn bộ dữ liệu? Hành động này không thể hoàn tác.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(dialogContext, false),
-                              child: const Text('Huỷ'),
-                            ),
-                            FilledButton(
-                              onPressed: () =>
-                                  Navigator.pop(dialogContext, true),
-                              child: const Text('Đồng ý'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-
-                    if (confirmed != true || !currentContext.mounted) return;
-
-                    try {
-                      await AppDatabase.resetDatabase();
-                      if (!currentContext.mounted) return;
-
-                      await shiftProvider.load();
-                      await workProvider.loadWorks();
-                      await dashboardProvider.load();
-                      await analyticsProvider.load();
-                      await timelineProvider.loadTimeline();
-
-                      if (!currentContext.mounted) return;
-                      AppFeedback.showSuccess(
-                        currentContext,
-                        'Dữ liệu đã được đặt lại thành công.',
-                      );
-                    } catch (_) {
-                      if (!currentContext.mounted) return;
-                      AppFeedback.showError(
-                        currentContext,
-                        'Reset dữ liệu thất bại. Vui lòng thử lại.',
-                      );
-                    }
-                  },
+              ),
+              const Divider(height: 1, indent: 72),
+              ListTile(
+                leading: const Icon(Icons.lock_outline_rounded),
+                title: const Text('Privacy'),
+                subtitle: const Text('Your data stays on this device'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PrivacyPage()),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SectionTitle(title: 'Information'),
-          AppCard(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text('About'),
-                  subtitle: const Text('App version and platform details'),
-                  onTap: () {
-                    showAboutDialog(
-                      context: context,
-                      applicationName: 'Work Tracker',
-                      applicationVersion: '1.0.0',
-                      applicationLegalese:
-                          'Made with Flutter\nSQLite Local Database\nMaterial 3',
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: const Text('Privacy'),
-                  subtitle: const Text('Xem chính sách riêng tư'),
-                  onTap: () {
-                    if (!context.mounted) return;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PrivacyPage()),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.verified_user_outlined),
-                  title: const Text('License'),
-                  subtitle: const Text('Open Flutter license page'),
-                  onTap: () {
-                    if (!context.mounted) return;
-                    showLicensePage(
-                      context: context,
-                      applicationName: 'Work Tracker',
-                      applicationVersion: '1.0.0',
-                    );
-                  },
-                ),
-              ],
+          const SizedBox(height: 24),
+          Text(
+            'Work Tracker',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: colors.onSurfaceVariant,
             ),
           ),
         ],
       ),
     );
   }
+
+  Future<void> _export(BuildContext context) async {
+    final shiftProvider = context.read<ShiftProvider>();
+    await shiftProvider.load();
+    final path = await ExportService().exportShiftsToCsv(shiftProvider.shifts);
+    if (!context.mounted) return;
+
+    if (path == null) {
+      AppFeedback.showError(
+        context,
+        shiftProvider.shifts.isEmpty
+            ? 'There is no shift data to export'
+            : 'Could not export data',
+      );
+      return;
+    }
+
+    AppFeedback.showSuccess(context, 'Exported to $path');
+  }
+
+  String _themeLabel(AppThemeMode mode) => switch (mode) {
+    AppThemeMode.system => 'Use device settings',
+    AppThemeMode.light => 'Light',
+    AppThemeMode.dark => 'Dark',
+  };
+
+  void _themePicker(BuildContext context, SettingsProvider settings) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: AppThemeMode.values.map((mode) => RadioListTile<AppThemeMode>(
+            value: mode,
+            groupValue: settings.themeMode,
+            title: Text(_themeLabel(mode)),
+            onChanged: (value) {
+              if (value != null) settings.updateThemeMode(value);
+              Navigator.pop(context);
+            },
+          )).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _currencyPicker(BuildContext context, SettingsProvider settings) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: CurrencyOption.values.map((option) => RadioListTile<CurrencyOption>(
+            value: option,
+            groupValue: settings.currency,
+            title: Text(option.label),
+            onChanged: (value) {
+              if (value != null) settings.updateCurrency(value);
+              Navigator.pop(context);
+            },
+          )).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel(this.label);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+    child: Text(
+      label.toUpperCase(),
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+      ),
+    ),
+  );
+}
+
+class _SettingsGroup extends StatelessWidget {
+  final List<Widget> children;
+  const _SettingsGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    clipBehavior: Clip.antiAlias,
+    child: Column(children: children),
+  );
 }

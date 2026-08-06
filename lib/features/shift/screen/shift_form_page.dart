@@ -164,8 +164,22 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
     return Scaffold(
       appBar: AppBar(title: Text(isEdit ? "Sửa ca làm" : "Thêm ca làm")),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
+          Text(
+            isEdit ? 'Update your shift' : 'Plan a work shift',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choose a work, set the time, and add a note when you need one.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 24),
           DropdownButtonFormField<Work>(
             initialValue: selectedWork,
             decoration: const InputDecoration(
@@ -352,16 +366,9 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
               }
 
               final provider = currentContext.read<ShiftProvider>();
-              final existingShifts = provider.shifts.where((item) {
-                if (item.workId != selectedWork!.id) return false;
-                if (item.workDate != workDate) return false;
-                if (isEdit && item.id == widget.shift?.id) return false;
-                return true;
-              }).toList();
 
-              if (selectedWork!.salaryType != Work.freelance &&
-                  startTime != null &&
-                  endTime != null) {
+              if (startTime != null && endTime != null) {
+                await provider.load();
                 final newStart = DateTime(
                   workDate.year,
                   workDate.month,
@@ -377,14 +384,30 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                   endTime!.minute,
                 );
 
+                final selectedDate = DateTime(
+                  workDate.year,
+                  workDate.month,
+                  workDate.day,
+                );
+                final existingShifts = provider.shifts.where((item) {
+                  final existingDate = DateTime(
+                    item.workDate.year,
+                    item.workDate.month,
+                    item.workDate.day,
+                  );
+                  if (existingDate != selectedDate) return false;
+                  if (isEdit && item.id == widget.shift?.id) return false;
+                  return true;
+                }).toList();
+
                 for (final existing in existingShifts) {
-                  if (existing.startDateTime == null ||
-                      existing.endDateTime == null) {
+                  if (existing.startDateTime == null) {
                     continue;
                   }
 
                   final existingStart = existing.startDateTime!;
-                  final existingEnd = existing.endDateTime!;
+                  final existingEnd = existing.endDateTime ?? DateTime(9999);
+
                   final overlap =
                       newStart.isBefore(existingEnd) &&
                       newEnd.isAfter(existingStart);
@@ -396,6 +419,8 @@ class _ShiftFormPageState extends State<ShiftFormPage> {
                     return;
                   }
                 }
+
+                await provider.load(selectedWork!.id);
               }
 
               final shift = Shift(

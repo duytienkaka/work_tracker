@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_radius.dart';
-
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -12,19 +9,16 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final card = Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        boxShadow: const [
-          BoxShadow(
-            blurRadius: 12,
-            offset: Offset(0, 4),
-            color: Color(0x11000000),
-          ),
-        ],
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+        ),
       ),
       child: child,
     );
@@ -34,7 +28,7 @@ class AppCard extends StatelessWidget {
     }
 
     return InkWell(
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: card,
     );

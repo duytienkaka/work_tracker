@@ -4,10 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/empty_state.dart';
-import '../../../theme/app_radius.dart';
-import '../../../shared/widgets/section_title.dart';
-import '../../../theme/app_colors.dart';
-import '../../../theme/app_spacing.dart';
 import '../../work/model/work_model.dart';
 import '../../work/provider/work_provider.dart';
 import '../model/shift_model.dart';
@@ -17,7 +13,6 @@ import 'shift_form_page.dart';
 
 class ShiftListPage extends StatefulWidget {
   final Work? work;
-
   const ShiftListPage({super.key, this.work});
 
   @override
@@ -26,408 +21,175 @@ class ShiftListPage extends StatefulWidget {
 
 class _ShiftListPageState extends State<ShiftListPage> {
   String query = '';
-  bool _hasLoaded = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    if (_hasLoaded) return;
-    _hasLoaded = true;
-
+  void initState() {
+    super.initState();
     Future.microtask(() {
       if (!mounted) return;
-      if (widget.work != null) {
-        context.read<ShiftProvider>().load(widget.work!.id);
-      } else {
-        context.read<ShiftProvider>().load();
-      }
+      context.read<ShiftProvider>().load(widget.work?.id);
       context.read<WorkProvider>().loadWorks();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.work != null) {
-      final provider = context.watch<ShiftProvider>();
-
-      return Scaffold(
-        appBar: AppBar(title: Text(widget.work!.name)),
-        body: RefreshIndicator(
-          onRefresh: () async {
-            await provider.load(widget.work!.id);
-          },
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  boxShadow: const [
-                    BoxShadow(
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                      color: Color(0x11000000),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Tóm tắt ca làm',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildSummary(
-                      'Tổng thu',
-                      provider.totalIncome,
-                      AppColors.primary,
-                    ),
-                    const SizedBox(height: 8),
-                    _buildSummary(
-                      'Tổng chi',
-                      provider.totalExpense,
-                      AppColors.danger,
-                    ),
-                    const SizedBox(height: 8),
-                    _buildSummary(
-                      'Lợi nhuận',
-                      provider.totalProfit,
-                      AppColors.success,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SectionTitle(title: 'Danh sách ca làm'),
-              if (provider.shifts.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                  child: EmptyState(
-                    icon: Icons.schedule_outlined,
-                    title: 'Chưa có ca làm nào',
-                    subtitle: 'Hãy thêm ca làm đầu tiên cho công việc này.',
-                  ),
-                )
-              else
-                ...provider.shifts.map((shift) {
-                  final work =
-                      widget.work ??
-                      Work(
-                        id: shift.workId,
-                        name: shift.workId,
-                        description: '',
-                        salaryType: Work.legacyFixed,
-                        dailyRate: 0,
-                        hourlyRate: 0,
-                        color: 0,
-                        icon: 0,
-                        isActive: true,
-                        createdAt: DateTime.now(),
-                      );
-                  return _buildShiftCard(shift, work);
-                }),
-            ],
-          ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ShiftFormPage(work: widget.work!),
-              ),
-            );
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Thêm ca làm'),
-        ),
-      );
-    }
-
     final provider = context.watch<ShiftProvider>();
-    final workProvider = context.read<WorkProvider>();
+    final works = context.watch<WorkProvider>().works;
+    final colors = Theme.of(context).colorScheme;
+    final shifts = provider.shifts.where((shift) {
+      if (query.trim().isEmpty) return true;
+      final work = _workFor(shift, works);
+      final text = '${work?.name ?? ''} ${shift.workDate} ${shift.note}'.toLowerCase();
+      return text.contains(query.trim().toLowerCase());
+    }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tất cả ca làm')),
+      appBar: AppBar(title: Text(widget.work?.name ?? 'All shifts')),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await provider.load();
-        },
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Tất cả ca làm',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text('Tìm kiếm ca làm'),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'Tìm ca làm...',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.search),
+        onRefresh: () => provider.load(widget.work?.id),
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: TextField(
+                  onChanged: (value) => setState(() => query = value),
+                  decoration: InputDecoration(
+                    hintText: 'Search shifts',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: colors.surfaceContainerHighest,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(18)),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      query = value.toLowerCase();
-                    });
-                  },
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: provider.shifts.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: AppSpacing.lg,
-                          ),
-                          child: EmptyState(
-                            icon: Icons.schedule_outlined,
-                            title: 'Chưa có ca làm nào',
-                            subtitle: 'Thêm ca làm mới để bắt đầu.',
-                          ),
-                        )
-                      : ListView(
-                          children: provider.shifts
-                              .where((shift) {
-                                final searchText =
-                                    '${shift.workId} ${shift.workDate.toString().substring(0, 10)} ${shift.startTime} ${shift.endTime}'
-                                        .toLowerCase();
-                                return query.isEmpty ||
-                                    searchText.contains(query);
-                              })
-                              .map((shift) {
-                                final work = workProvider.works.firstWhere(
-                                  (item) => item.id == shift.workId,
-                                  orElse: () => Work(
-                                    id: shift.workId,
-                                    name: shift.workId,
-                                    description: '',
-                                    salaryType: Work.legacyFixed,
-                                    dailyRate: 0,
-                                    hourlyRate: 0,
-                                    color: 0,
-                                    icon: 0,
-                                    isActive: true,
-                                    createdAt: DateTime.now(),
-                                  ),
-                                );
-                                return _buildShiftCard(shift, work);
-                              })
-                              .toList(),
-                        ),
-                ),
-              ],
+              ),
             ),
-          ),
+            if (shifts.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: EmptyState(
+                    icon: Icons.event_note_rounded,
+                    title: 'No shifts found',
+                    subtitle: 'Create a shift to start tracking your workday.',
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final shift = shifts[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _ShiftCard(
+                          shift: shift,
+                          work: _workFor(shift, works),
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ShiftDetailPage(
+                                  work: _workFor(shift, works),
+                                  shift: shift,
+                                ),
+                              ),
+                            );
+                            if (mounted) provider.load(widget.work?.id);
+                          },
+                        ),
+                      );
+                    },
+                    childCount: shifts.length,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
+      floatingActionButton: widget.work == null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ShiftFormPage(work: widget.work)),
+              ),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('New shift'),
+            ),
     );
   }
+}
 
-  Widget _buildSummary(String title, double value, Color color) {
-    return Row(
-      children: [
-        Text(
-          title,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-        ),
-        const Spacer(),
-        Text(
-          MoneyFormatter.format(value),
-          style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
+Work? _workFor(Shift shift, List<Work> works) {
+  for (final work in works) {
+    if (work.id == shift.workId) return work;
   }
+  return null;
+}
 
-  Widget _buildShiftCard(Shift shift, Work work) {
+class _ShiftCard extends StatelessWidget {
+  final Shift shift;
+  final Work? work;
+  final VoidCallback onTap;
+  const _ShiftCard({required this.shift, required this.work, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final status = _status(shift);
+    final profitColor = shift.profit >= 0 ? colors.primary : colors.error;
     return AppCard(
-      onTap: () async {
-        final shiftProvider = context.read<ShiftProvider>();
-        final currentContext = context;
-
-        await Navigator.push(
-          currentContext,
-          MaterialPageRoute(
-            builder: (_) => ShiftDetailPage(work: work, shift: shift),
-          ),
-        );
-
-        if (!currentContext.mounted) return;
-        if (!mounted) return;
-        await shiftProvider.load();
-      },
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Expanded(
-                child: Text(
-                  shift.workDate.toString().substring(0, 10),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
+                child: Text(work?.name ?? 'Work shift', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Text(
-                  'Ca làm',
-                  style: TextStyle(color: AppColors.primary, fontSize: 12),
-                ),
-              ),
+              Text(status, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: colors.primary, fontWeight: FontWeight.w700)),
             ],
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _Chip(
-                label:
-                    '${shift.startTime} → ${shift.endTime.isEmpty ? '---' : shift.endTime}',
-                icon: Icons.access_time_rounded,
-              ),
-              _Chip(label: work.name, icon: Icons.work_outline_rounded),
-            ],
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
+          Text('${_date(shift.workDate)}  ·  ${shift.startTime} - ${shift.endTime.isEmpty ? 'In progress' : shift.endTime}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
+          const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: _ValueTile(
-                  label: 'Thu nhập',
-                  value: MoneyFormatter.format(shift.income),
-                  color: AppColors.success,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ValueTile(
-                  label: 'Chi phí',
-                  value: MoneyFormatter.format(shift.expense),
-                  color: AppColors.danger,
-                ),
-              ),
+              Expanded(child: _Value(label: 'Income', value: MoneyFormatter.format(shift.income), color: colors.primary)),
+              Expanded(child: _Value(label: 'Expense', value: MoneyFormatter.format(shift.expense), color: colors.error)),
+              Expanded(child: _Value(label: 'Profit', value: MoneyFormatter.format(shift.profit), color: profitColor)),
             ],
           ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Lợi nhuận: ${MoneyFormatter.format(shift.profit)}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ),
-          if (shift.note.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(shift.note, style: TextStyle(color: AppColors.textSecondary)),
-          ],
         ],
       ),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-
-  const _Chip({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.primary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ValueTile extends StatelessWidget {
+class _Value extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-
-  const _ValueTile({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
+  const _Value({required this.label, required this.value, required this.color});
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(color: color, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 3), Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color, fontWeight: FontWeight.w800))]);
+}
+
+String _date(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+String _status(Shift shift) {
+  final now = DateTime.now();
+  final start = shift.startDateTime;
+  final end = shift.endDateTime;
+  if (start != null && now.isBefore(start)) return 'Upcoming';
+  if (end == null && start != null && now.isAfter(start)) return 'In progress';
+  if (end != null && now.isAfter(end)) return 'Completed';
+  return 'Scheduled';
 }

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/widgets/section_title.dart';
 import '../../../theme/app_spacing.dart';
-import '../../analytics/provider/analytics_provider.dart';
-import '../../dashboard/provider/dashboard_provider.dart';
-import '../../timeline/provider/timeline_provider.dart';
-import '../widgets/work_card.dart';
 import '../provider/work_provider.dart';
+import '../widgets/work_card.dart';
 import 'work_detail_page.dart';
 import 'work_form_page.dart';
 
@@ -23,230 +20,152 @@ class _WorkListPageState extends State<WorkListPage> {
   @override
   void initState() {
     super.initState();
-
     Future.microtask(() {
-      if (!mounted) return;
-      context.read<WorkProvider>().loadWorks();
+      if (mounted) context.read<WorkProvider>().loadWorks();
     });
+  }
+
+  Future<void> _newWork() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const WorkFormPage()),
+    );
+    if (mounted) context.read<WorkProvider>().loadWorks();
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<WorkProvider>();
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Công việc')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Tìm công việc...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+      appBar: AppBar(
+        title: const Text('Works'),
+        actions: [
+          IconButton(
+            tooltip: 'Add work',
+            onPressed: _newWork,
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: provider.loadWorks,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Text(
+                  '${provider.filteredSummaries.length} work spaces',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
               ),
-              onChanged: (value) {
-                context.read<WorkProvider>().search(value);
-              },
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: SectionTitle(title: 'Danh sách công việc'),
-          ),
-          Expanded(
-            child: provider.filteredWorks.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.md),
-                      child: EmptyState(
-                        icon: Icons.work_outline,
-                        title: 'Chưa có công việc',
-                        subtitle: 'Hãy thêm công việc đầu tiên để bắt đầu.',
-                      ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: TextField(
+                  onChanged: provider.search,
+                  decoration: InputDecoration(
+                    hintText: 'Search your work',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: colors.surfaceContainerHighest,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(18)),
+                      borderSide: BorderSide.none,
                     ),
-                  )
-                : AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: ListView.builder(
-                      key: ValueKey(provider.filteredSummaries.length),
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md,
-                        0,
-                        AppSpacing.md,
-                        AppSpacing.xl,
-                      ),
-                      itemCount: provider.filteredSummaries.length,
-                      itemBuilder: (context, index) {
-                        final summary = provider.filteredSummaries[index];
-
-                        return WorkCard(
+                  ),
+                ),
+              ),
+            ),
+            if (provider.filteredSummaries.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.lg),
+                    child: EmptyState(
+                      icon: Icons.workspaces_outline,
+                      title: 'No work spaces yet',
+                      subtitle: 'Create a work space to start tracking shifts.',
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final summary = provider.filteredSummaries[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: WorkCard(
                           summary: summary,
                           onTap: () async {
                             await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    WorkDetailPage(summary: summary),
+                                builder: (_) => WorkDetailPage(summary: summary),
                               ),
                             );
+                            if (mounted) provider.loadWorks();
                           },
-                          onEdit: () {
-                            Navigator.push(
+                          onEdit: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    WorkFormPage(work: summary.work),
+                                builder: (_) => WorkFormPage(work: summary.work),
                               ),
                             );
+                            if (mounted) provider.loadWorks();
                           },
                           onDelete: () async {
-                            if (!mounted) return;
-                            final currentContext = context;
-                            if (!currentContext.mounted) return;
-
-                            final dashboardProvider = currentContext
-                                .read<DashboardProvider>();
-                            final analyticsProvider = currentContext
-                                .read<AnalyticsProvider>();
-                            final timelineProvider = currentContext
-                                .read<TimelineProvider>();
-
-                            final deleteSummary = await provider
-                                .getDeleteSummary(summary.work.id);
-
-                            if (!mounted || !currentContext.mounted) {
-                              return;
-                            }
-
-                            final shouldDelete = await showDialog<bool>(
-                              context: currentContext,
-                              builder: (dialogContext) {
-                                final dialogSummary = deleteSummary;
-                                return AlertDialog(
-                                  title: const Text('Xoá công việc vĩnh viễn?'),
-                                  content: SizedBox(
-                                    width: double.maxFinite,
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Hành động này sẽ xoá ${summary.work.name} cùng toàn bộ ca làm, khoản thu và chi liên quan.',
-                                          ),
-                                          const SizedBox(height: 12),
-                                          _DeleteSummaryRow(
-                                            label: 'Ca làm',
-                                            value:
-                                                '${dialogSummary['shifts'] ?? 0}',
-                                          ),
-                                          _DeleteSummaryRow(
-                                            label: 'Khoản thu',
-                                            value:
-                                                '${dialogSummary['income'] ?? 0}',
-                                          ),
-                                          _DeleteSummaryRow(
-                                            label: 'Chi phí',
-                                            value:
-                                                '${dialogSummary['expense'] ?? 0}',
-                                          ),
-                                          const SizedBox(height: 12),
-                                          const Text(
-                                            'Không thể hoàn tác sau khi xác nhận.',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('Delete this work?'),
+                                content: Text(
+                                  'All shifts and entries for ${summary.work.name} will be removed.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dialogContext, false),
+                                    child: const Text('Cancel'),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(dialogContext, false),
-                                      child: const Text('Huỷ'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () =>
-                                          Navigator.pop(dialogContext, true),
-                                      child: const Text('Xoá vĩnh viễn'),
-                                    ),
-                                  ],
-                                );
-                              },
+                                  FilledButton.tonal(
+                                    onPressed: () => Navigator.pop(dialogContext, true),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
                             );
-
-                            if (shouldDelete != true ||
-                                !currentContext.mounted) {
-                              return;
-                            }
-
+                            if (confirmed != true || !mounted) return;
                             try {
                               await provider.deleteWork(summary.work.id);
-                              await dashboardProvider.load();
-                              await analyticsProvider.load();
-                              await timelineProvider.loadTimeline();
-                              if (!currentContext.mounted) return;
-                              AppFeedback.showSuccess(
-                                currentContext,
-                                'Công việc và ca làm liên quan đã được xoá.',
-                              );
+                              if (mounted) AppFeedback.showSuccess(context, 'Work deleted');
                             } catch (_) {
-                              if (!currentContext.mounted) return;
-                              AppFeedback.showError(
-                                currentContext,
-                                'Xoá công việc thất bại. Vui lòng thử lại.',
-                              );
+                              if (mounted) AppFeedback.showError(context, 'Could not delete work');
                             }
                           },
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                    childCount: provider.filteredSummaries.length,
                   ),
-          ),
-        ],
+                ),
+              ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const WorkFormPage()),
-          );
-
-          await provider.loadWorks();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Thêm mới'),
-      ),
-    );
-  }
-}
-
-class _DeleteSummaryRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DeleteSummaryRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(width: 8),
-          Text(value),
-        ],
+        onPressed: _newWork,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New work'),
       ),
     );
   }

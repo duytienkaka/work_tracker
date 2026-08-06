@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_text_styles.dart';
 
 class SectionTitle extends StatelessWidget {
   final String title;
@@ -11,10 +10,17 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12, top: 8),
+      padding: const EdgeInsets.only(bottom: 10, top: 20),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: AppTextStyles.title)),
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
           action ?? const SizedBox.shrink(),
         ],
       ),

@@ -13,6 +13,7 @@ import '../../expense/model/expense_model.dart';
 import '../../income/model/income_model.dart';
 import '../../settings/screen/settings_page.dart';
 import '../../shift/model/shift_model.dart';
+import '../../shift/screen/shift_detail_page.dart';
 import '../../shift/screen/shift_form_page.dart';
 import '../../timeline/screen/timeline_page.dart';
 import '../../work/model/work_model.dart';
@@ -760,6 +761,16 @@ class _ActiveShiftCard extends StatelessWidget {
     final remainingText = _shiftRemainingText(currentShift, now);
 
     return AppCard(
+      onTap: () {
+        if (shift != null && work != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ShiftDetailPage(work: work, shift: shift),
+            ),
+          );
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -806,11 +817,17 @@ class _ActiveShiftCard extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text(
-                  statusText,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    statusText,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),

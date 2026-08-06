@@ -17,53 +17,53 @@ class _TimelinePageState extends State<TimelinePage> {
   @override
   void initState() {
     super.initState();
-
     Future.microtask(() {
-      if (!mounted) return;
-      context.read<TimelineProvider>().loadTimeline();
+      if (mounted) context.read<TimelineProvider>().loadTimeline();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<TimelineProvider>(
-      builder: (_, provider, _) {
+      builder: (context, provider, _) {
+        final colors = Theme.of(context).colorScheme;
         return RefreshIndicator(
           onRefresh: provider.refresh,
           child: CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: 0,
                 floating: true,
                 snap: true,
-                title: const Text('Dòng thời gian'),
+                title: const Text('Timeline'),
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(70),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: TextField(
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search),
-                        hintText: 'Tìm theo ngày hoặc ghi chú',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        hintText: 'Search shifts, work, or notes',
+                        filled: true,
+                        fillColor: colors.surfaceContainerHighest,
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(18)),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
-                      onChanged: (value) {
-                        context.read<TimelineProvider>().search(value);
-                      },
+                      onChanged: provider.search,
                     ),
                   ),
                 ),
               ),
               if (provider.filteredTimeline.isEmpty)
-                SliverFillRemaining(
+                const SliverFillRemaining(
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      padding: EdgeInsets.all(AppSpacing.lg),
                       child: EmptyState(
-                        icon: Icons.inbox,
-                        title: 'Không tìm thấy dữ liệu',
-                        subtitle:
-                            'Thử tìm kiếm theo ngày, công việc hoặc ghi chú',
+                        icon: Icons.timeline_rounded,
+                        title: 'No timeline entries',
+                        subtitle: 'Completed shifts will appear here.',
                       ),
                     ),
                   ),
@@ -72,18 +72,20 @@ class _TimelinePageState extends State<TimelinePage> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.md,
-                    AppSpacing.sm,
+                    AppSpacing.md,
                     AppSpacing.md,
                     AppSpacing.xl,
                   ),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final item = provider.filteredTimeline[index];
-                      return Padding(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: TimelineCard(item: item),
-                      );
-                    }, childCount: provider.filteredTimeline.length),
+                        child: TimelineCard(
+                          item: provider.filteredTimeline[index],
+                        ),
+                      ),
+                      childCount: provider.filteredTimeline.length,
+                    ),
                   ),
                 ),
             ],

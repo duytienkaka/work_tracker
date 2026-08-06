@@ -25,6 +25,10 @@ class ShiftRepository {
   Future<void> insert(Shift shift) async {
     final db = await _db;
 
+    if (await hasTimeOverlap(shift)) {
+      throw StateError('A shift already exists in this time range.');
+    }
+
     await db.insert(
       "shifts",
       shift.toMap(),
@@ -36,6 +40,10 @@ class ShiftRepository {
 
   Future<void> update(Shift shift) async {
     final db = await _db;
+
+    if (await hasTimeOverlap(shift)) {
+      throw StateError('A shift already exists in this time range.');
+    }
 
     await db.update(
       "shifts",
@@ -79,6 +87,36 @@ class ShiftRepository {
 
     if (result.isEmpty) return null;
     return _hydrateShiftTotals(Shift.fromMap(result.first));
+  }
+
+  Future<bool> hasTimeOverlap(Shift candidate) async {
+    final db = await _db;
+    final rows = await db.query('shifts');
+    final candidateStart = candidate.startDateTime;
+    final candidateEnd = candidate.endDateTime;
+    if (candidateStart == null || candidateEnd == null) return false;
+
+    for (final row in rows) {
+      final existing = Shift.fromMap(row);
+      if (existing.id == candidate.id ||
+          existing.workDate.year != candidate.workDate.year ||
+          existing.workDate.month != candidate.workDate.month ||
+          existing.workDate.day != candidate.workDate.day) {
+        continue;
+      }
+
+      final existingStart = existing.startDateTime;
+      final existingEnd = existing.endDateTime;
+      if (existingStart == null) continue;
+
+      final blockingEnd = existingEnd ?? DateTime(9999);
+      if (candidateStart.isBefore(blockingEnd) &&
+          candidateEnd.isAfter(existingStart)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   Future<Shift> _hydrateShiftTotals(Shift shift) async {

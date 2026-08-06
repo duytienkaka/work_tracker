@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../../core/utils/money_formatter.dart';
 import '../../../shared/widgets/app_card.dart';
-import '../../../theme/app_colors.dart';
+import '../model/work_model.dart';
 import '../model/work_summary.dart';
-import '../provider/work_provider.dart';
-import '../screen/work_detail_page.dart';
 
 class WorkCard extends StatelessWidget {
   final WorkSummary summary;
@@ -22,51 +19,43 @@ class WorkCard extends StatelessWidget {
     this.onDelete,
   });
 
-  String get salaryType => summary.work.salaryTypeName;
-
   @override
   Widget build(BuildContext context) {
-    final handleTap =
-        onTap ??
-        () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => WorkDetailPage(summary: summary)),
-          );
-        };
+    final colors = Theme.of(context).colorScheme;
+    final work = summary.work;
+    final profitColor = summary.profit >= 0 ? colors.primary : colors.error;
 
     return AppCard(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: handleTap,
+      padding: EdgeInsets.zero,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Color(
-                    summary.work.color,
-                  ).withValues(alpha: 0.16),
-                  child: Icon(Icons.work, color: Color(summary.work.color)),
-                ),
+                _WorkIcon(work: work),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        summary.work.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        work.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        salaryType,
-                        style: TextStyle(color: AppColors.textSecondary),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        children: [
+                          _Badge(label: _typeLabel(work), filled: true),
+                          _Badge(label: _rateLabel(work)),
+                        ],
                       ),
                     ],
                   ),
@@ -74,126 +63,151 @@ class WorkCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   tooltip: 'More actions',
                   onSelected: (value) {
-                    if (value == 'edit') {
-                      onEdit?.call();
-                    } else if (value == 'delete') {
-                      onDelete?.call();
-                    }
+                    if (value == 'edit') onEdit?.call();
+                    if (value == 'delete') onDelete?.call();
                   },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
                       value: 'edit',
-                      child: ListTile(
-                        leading: Icon(Icons.edit_outlined),
-                        title: Text('Chỉnh sửa'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                      child: Text('Edit work'),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline_rounded),
-                        title: Text('Xoá'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                      child: Text('Delete work'),
                     ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              summary.work.description.isEmpty
-                  ? 'Không có mô tả'
-                  : summary.work.description,
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 8),
-            FutureBuilder<WorkSummary>(
-              future: () {
-                try {
-                  final provider = context.read<WorkProvider>();
-                  return provider.getSummary(summary.work.id);
-                } catch (_) {
-                  return Future<WorkSummary>.value(summary);
-                }
-              }(),
-              builder: (context, snapshot) {
-                final stats = snapshot.data ?? summary;
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatTile(
-                            label: 'Ca',
-                            value: '${stats.totalShift} ca',
-                          ),
-                        ),
-                        Expanded(
-                          child: _StatTile(
-                            label: 'Thu',
-                            value: MoneyFormatter.format(stats.income),
-                          ),
-                        ),
-                      ],
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.45)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _Metric(
+                      label: 'Shifts',
+                      value: '${summary.totalShifts}',
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatTile(
-                            label: 'Chi',
-                            value: MoneyFormatter.format(stats.expense),
-                          ),
-                        ),
-                        Expanded(
-                          child: _StatTile(
-                            label: 'Lợi nhuận',
-                            value: MoneyFormatter.format(stats.profit),
-                          ),
-                        ),
-                      ],
+                  ),
+                  Expanded(
+                    child: _Metric(
+                      label: 'Income',
+                      value: MoneyFormatter.format(summary.totalIncome),
                     ),
-                  ],
-                );
-              },
+                  ),
+                  Expanded(
+                    child: _Metric(
+                      label: 'Profit',
+                      value: MoneyFormatter.format(summary.profit),
+                      color: profitColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  String _typeLabel(Work work) => switch (work.salaryType) {
+    Work.hourly => 'Hourly',
+    Work.daily => 'Daily',
+    Work.freelance => 'Freelance',
+    _ => 'Fixed',
+  };
+
+  String _rateLabel(Work work) => switch (work.salaryType) {
+    Work.hourly => '${MoneyFormatter.format(work.hourlyRate)}/h',
+    Work.daily => '${MoneyFormatter.format(work.dailyRate)}/day',
+    Work.freelance => 'Manual income',
+    _ => 'Fixed salary',
+  };
 }
 
-class _StatTile extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatTile({required this.label, required this.value});
+class _WorkIcon extends StatelessWidget {
+  final Work work;
+  const _WorkIcon({required this.work});
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final icon = switch (work.salaryType) {
+      Work.hourly => Icons.schedule_rounded,
+      Work.daily => Icons.today_rounded,
+      Work.freelance => Icons.design_services_rounded,
+      _ => Icons.work_rounded,
+    };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
+        color: colors.primaryContainer,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-          ),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ],
+      child: Icon(icon, color: colors.onPrimaryContainer),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final String label;
+  final bool filled;
+  const _Badge({required this.label, this.filled = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: filled ? colors.primaryContainer : colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: filled ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
+}
+
+class _Metric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+  const _Metric({required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ],
+  );
 }

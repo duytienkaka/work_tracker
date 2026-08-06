@@ -20,11 +20,11 @@ class ErrorView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: AppColors.danger.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
+                  shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.error_outline_rounded,
@@ -36,9 +36,8 @@ class ErrorView extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 16),
